@@ -26,122 +26,203 @@ const LEFT = 37;
 const UP = 38;
 const RIGHT = 39;
 
-const HERO_SPEED = 1;
+
 const HERO_MAX_SPEED = 5;
 const HERO_FRICTION = .95;
 const GRAVITY = .2;
-const JUMP = -5;
+const JUMP = -1.5;
+const JUMP_BOOST = -.8;
+const JUMP_TIME = 10;
 const HAZARD_FRICTION = .98;
 
-
 var hero;
-var heroVelocityX = 0;
-var heroVelocityY = 0;
-
 var hazards = [];
-var hazardsVelocityX = [];
-var hazardsVelocityY = [];
-var hazardsSpeed = [];
-
-
+var blackHoles = [];
 
 PIXI.loader
-  .add(["img/hero.png", "img/hazard.png"])
+  .add(["img/hero.png", "img/hazard.png", "img/black-hole.png"])
   .load(setup);
 
 function setup() {
-  hero = new PIXI.Sprite(
-    PIXI.loader.resources["img/hero.png"].texture
-  );
+  hero = newHero();
   hero.x = 200;
+  hero.y = 100;
 
   for (var i = 0; i < 5; i++) {
-    var hazard = new PIXI.Sprite(
-      PIXI.loader.resources["img/hazard.png"].texture
-    )
-    stage.addChild(hazard);
+    var hazard = newHazard();
+    stage.addChild(hazard.sprite);
     hazards.push(hazard);
-    hazardsVelocityX.push(0);
-    hazardsVelocityY.push(0);
-    hazardsSpeed.push(2);
-    hazard.x = Math.random() * 500;
-    hazard.y = Math.random() * 500;
   }
 
-  stage.addChild(hero);
+  stage.addChild(hero.sprite);
 
   renderer.render(stage);
   gameLoop();
 }
 
-const keyLeft = keyboard(LEFT);
-const keyRight = keyboard(RIGHT);
-const keyUp = keyboard(UP);
+var keyLeft = keyboard(LEFT);
+var keyRight = keyboard(RIGHT);
+var keyUp = keyboard(UP);
 
+keyUp.press = function() {
+  if (hero.velocity.y > -7) {
+    hero.velocity.y = JUMP;
+    hero.jumpingTime = JUMP_TIME;
+  }
+}
 
+keyUp.release = function() {
+  hero.jumpingTime = 0;
+}
 
 function gameLoop() {
   requestAnimationFrame(gameLoop);
 
-  heroVelocityX *= HERO_FRICTION;
-  heroVelocityY += GRAVITY;
+  hero.velocity.x *= HERO_FRICTION;
+  hero.velocity.y += GRAVITY;
 
   if (keyRight.isDown) {
-    heroVelocityX += HERO_SPEED;
-  }
-  if (keyLeft.isDown) {
-    heroVelocityX -= HERO_SPEED;
-  }
-  if (keyUp.isDown) {
-    heroVelocityY = JUMP;
+    hero.velocity.x += hero.speed;
   }
   
-  heroVelocityX = limit(heroVelocityX, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+  if (keyLeft.isDown) {
+    hero.velocity.x -= hero.speed;
+  }
 
-  hero.x += heroVelocityX;
-  hero.y += heroVelocityY;
+  if (keyUp.isDown) {
+    if (hero.jumpingTime > 0) {
+      hero.velocity.y += JUMP_BOOST;
+      hero.jumpingTime--;
+    }
+  }
+  
+  hero.velocity.x = limit(hero.velocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+
+  hero.x += hero.velocity.x;
+  hero.y += hero.velocity.y;
 
   for (var i = 0; i < hazards.length; i++) {
-    if (!hazards[i].visible) {
-      setupNewHazard(hazards[i]);
+    if (!hazards[i].enabled) {
+      hazards[i].reset();
     }
-    hazardsVelocityX[i] *= HAZARD_FRICTION;
-    hazardsVelocityY[i] *= HAZARD_FRICTION;
+    hazards[i].velocity.x *= HAZARD_FRICTION;
+    hazards[i].velocity.y *= HAZARD_FRICTION;
 
     const lengthToHero = vectorLength(
       hero.x - hazards[i].x, 
       hero.y - hazards[i].y,
     );
-    hazardsVelocityX[i] += (hero.x - hazards[i].x) / lengthToHero * .5;
-    hazardsVelocityY[i] += (hero.y - hazards[i].y) / lengthToHero * .5;
+    hazards[i].velocity.x += (hero.x - hazards[i].x) / lengthToHero * hazards[i].speed;
+    hazards[i].velocity.y += (hero.y - hazards[i].y) / lengthToHero * hazards[i].speed;
 
-    hazards[i].x += hazardsVelocityX[i];
-    hazards[i].y += hazardsVelocityY[i];
+    hazards[i].x += hazards[i].velocity.x;
+    hazards[i].y += hazards[i].velocity.y;
 
     // check hazard collision
     for (var j = 0; j < hazards.length; j++) {
-      if (i == j || !hazards[j].visible) {
+      if (i == j || !hazards[j].enabled) {
         continue;
       }
       if (vectorLength(hazards[j].x - hazards[i].x, hazards[j].y - hazards[i].y) < 10) {
-        hazards[j].visible = false;
-        hazards[i].scale.x += hazards[j].scale.x;
-        hazards[i].scale.y += hazards[j].scale.y;
+        hazards[j].enabled = false;
+        hazards[i].size += hazards[j].size;
+        if (hazards[i].size >= 10) {
+          hazards[i].enabled = false;
+          var blackHole = newBlackHole(hazards[i].x, hazards[i].y);
+          stage.addChild(blackHole.sprite);
+          blackHoles.push(blackHole);
+        }
       }
     }
+  }
+
+
+  // rendering
+  hero.render();
+  for (var i = 0; i < hazards.length; i++) {
+    hazards[i].render();
+  }
+  for (var i = 0; i < blackHoles.length; i++) {
+    blackHoles[i].render();
   }
   renderer.render(stage);
 }
 
 
-function setupNewHazard(hazard) {
-  hazard.visible = true;
-  hazard.y = Math.random() * 500;
-  if (Math.random() < .5) {
-    hazard.x = -50;
-  } else {
-    hazard.x = 1000;
+// classes
+function newHero() {
+  var hero = {
+    sprite: new PIXI.Sprite(PIXI.loader.resources["img/hero.png"].texture),
+    dimension: 0,
+    velocity: { x: 0, y: 0 },
+    jumpingTime: 0,
+    speed: 1,
+    size: 1,
+    x: 0,
+    y: 0,
   }
+
+  hero.render = function() {
+    hero.sprite.x = hero.x;
+    hero.sprite.y = hero.y;
+    hero.sprite.scale.x = hero.size;
+    hero.sprite.scale.y = hero.size;
+  }
+
+  return hero;
+}
+
+function newHazard() {
+  var hazard = {
+    sprite: new PIXI.Sprite(PIXI.loader.resources["img/hazard.png"].texture),
+    enabled: true,
+    dimension: 0,
+    velocity: { x: 0, y: 0 },
+    speed: .1,
+    size: 1,
+    x: 0,
+    y: 0,
+  };
+
+  hazard.reset = function() {
+    hazard.enabled = true;
+    hazard.dimension = 0;
+    hazard.size = 1;
+    hazard.y = Math.random() * 500;
+    if (Math.random() < .5) {
+      hazard.x = -50;
+    } else {
+      hazard.x = 1000;
+    }
+  }
+
+  hazard.render = function() {
+    hazard.sprite.x = hazard.x;
+    hazard.sprite.y = hazard.y;
+    hazard.sprite.scale.x = hazard.size;
+    hazard.sprite.scale.y = hazard.size;
+    hazard.sprite.visible = hazard.enabled;
+  }
+
+  hazard.reset();
+
+  return hazard;
+}
+
+function newBlackHole(x, y) {
+  var blackHole = {
+    sprite: new PIXI.Sprite(PIXI.loader.resources["img/black-hole.png"].texture),
+    dimension: 0,
+    x: x,
+    y: y
+  }
+
+  blackHole.render = function() {
+    blackHole.sprite.x = blackHole.x;
+    blackHole.sprite.y = blackHole.y;
+  }
+
+  return blackHole
 }
 
 

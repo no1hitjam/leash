@@ -1,0 +1,12 @@
+alpha-dimension
+  stars are attracted to you
+  stars leaving through black hole enter beta dimension as stars
+
+beta-dimension 
+  stars are repelled by you
+  stars leaving through black hole enter alpha dimension as consumables
+
+both dimensions
+  enough stars combine to create a black hole to the other dimension
+  stars are attracted to black holes made in same dimension
+  stars are repelled by black holes made in other dimension
