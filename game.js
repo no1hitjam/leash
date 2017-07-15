@@ -34,13 +34,21 @@ const JUMP = -1.5;
 const JUMP_BOOST = -.8;
 const JUMP_TIME = 10;
 const HAZARD_FRICTION = .98;
+const BLACK_HOLE_FORCE_HERO = .3;
+const BLACK_HOLE_FORCE_HAZARD = .05;
 
 var hero;
 var hazards = [];
 var blackHoles = [];
 
 PIXI.loader
-  .add(["img/hero.png", "img/hazard.png", "img/black-hole.png"])
+  .add([
+    "img/hero.png", 
+    "img/hazard-a.png", 
+    "img/hazard-a-empty.png", 
+    "img/hazard-b.png", 
+    "img/hazard-b-empty.png", 
+    "img/black-hole.png"])
   .load(setup);
 
 function setup() {
@@ -81,6 +89,7 @@ function gameLoop() {
   hero.velocity.x *= HERO_FRICTION;
   hero.velocity.y += GRAVITY;
 
+  // key inputs
   if (keyRight.isDown) {
     hero.velocity.x += hero.speed;
   }
@@ -95,6 +104,32 @@ function gameLoop() {
       hero.jumpingTime--;
     }
   }
+
+  // hero black holes
+  for (var i = 0; i < blackHoles.length; i++) {
+    var blackHole = blackHoles[i];
+    const distanceToHero = vectorLength(
+      hero.x - blackHole.x, 
+      hero.y - blackHole.y,
+    );
+    let force = 0;
+    if (distanceToHero != 0) {
+      force = 1 / distanceToHero * BLACK_HOLE_FORCE_HERO;
+    }
+
+    var attraction = {
+      x: (blackHole.x - hero.x) / distanceToHero,
+      y: (blackHole.y - hero.y) / distanceToHero
+    }
+    if (attraction.x !== 0) {
+      hero.velocity.x += (blackHole.x - hero.x) * force;
+    }
+    if (attraction.y !== 0) {
+      hero.velocity.y += (blackHole.y - hero.y) * force;
+    }
+  }
+
+  // add up hero velocity
   
   hero.velocity.x = limit(hero.velocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
 
@@ -102,38 +137,81 @@ function gameLoop() {
   hero.y += hero.velocity.y;
 
   for (var i = 0; i < hazards.length; i++) {
-    if (!hazards[i].enabled) {
-      hazards[i].reset();
+    var hazard = hazards[i];
+    if (!hazard.enabled) {
+      hazard.reset();
     }
-    hazards[i].velocity.x *= HAZARD_FRICTION;
-    hazards[i].velocity.y *= HAZARD_FRICTION;
+    hazard.velocity.x *= HAZARD_FRICTION;
+    hazard.velocity.y *= HAZARD_FRICTION;
 
-    const lengthToHero = vectorLength(
-      hero.x - hazards[i].x, 
-      hero.y - hazards[i].y,
-    );
-    hazards[i].velocity.x += (hero.x - hazards[i].x) / lengthToHero * hazards[i].speed;
-    hazards[i].velocity.y += (hero.y - hazards[i].y) / lengthToHero * hazards[i].speed;
+    if (hazard.dimension === hero.dimension) {
+      const lengthToHero = vectorLength(
+        hero.x - hazard.x, 
+        hero.y - hazard.y,
+      );
+      hazard.velocity.x += (hero.x - hazard.x) / lengthToHero * hazard.speed;
+      hazard.velocity.y += (hero.y - hazard.y) / lengthToHero * hazard.speed;
+    }
 
-    hazards[i].x += hazards[i].velocity.x;
-    hazards[i].y += hazards[i].velocity.y;
-
-    // check hazard collision
-    for (var j = 0; j < hazards.length; j++) {
-      if (i == j || !hazards[j].enabled) {
+    // hazard black holes
+    for (var j = 0; j < blackHoles.length; j++) {
+      var blackHole = blackHoles[j];
+      if (hazard.dimension !== blackHole.dimension) {
         continue;
       }
-      if (vectorLength(hazards[j].x - hazards[i].x, hazards[j].y - hazards[i].y) < 10) {
+      const distanceToHazard = vectorLength(
+        hazard.x - blackHole.x, 
+        hazard.y - blackHole.y,
+      );
+      let force = 0;
+      if (distanceToHazard != 0) {
+        force = 1 / distanceToHazard * BLACK_HOLE_FORCE_HAZARD;
+      }
+
+      var attraction = {
+        x: (blackHole.x - hazard.x) / distanceToHazard,
+        y: (blackHole.y - hazard.y) / distanceToHazard
+      }
+      if (attraction.x !== 0) {
+        hazard.velocity.x += (blackHole.x - hazard.x) * force;
+      }
+      if (attraction.y !== 0) {
+        hazard.velocity.y += (blackHole.y - hazard.y) * force;
+      }
+    }
+
+    hazard.x += hazard.velocity.x;
+    hazard.y += hazard.velocity.y;
+
+    // check hazard to black hole collision
+    for (var j = 0; j < blackHoles.length; j++) {
+      var blackHole = blackHoles[j];
+      if (blackHole.dimension !== hazard.dimension) {
+        continue;
+      }
+      if (vectorLength(blackHole.x - hazard.x, blackHole.y - hazard.y) < 10) {
+        hazard.flipDimension();
+      }
+    }
+
+    // check hazard to hazard collision
+    for (var j = 0; j < hazards.length; j++) {
+      if (i === j || !hazards[j].enabled || hazard.dimension !== hazards[j].dimension) {
+        continue;
+      }
+      if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < 10) {
         hazards[j].enabled = false;
-        hazards[i].size += hazards[j].size;
-        if (hazards[i].size >= 10) {
-          hazards[i].enabled = false;
-          var blackHole = newBlackHole(hazards[i].x, hazards[i].y);
+        hazard.size += hazards[j].size;
+        if (hazard.size >= 4) {
+          hazard.enabled = false;
+          var blackHole = newBlackHole(hazard.x, hazard.y, hazard.dimension);
           stage.addChild(blackHole.sprite);
           blackHoles.push(blackHole);
         }
       }
     }
+
+    // careful here, hazard may be unenabled now
   }
 
 
@@ -153,7 +231,7 @@ function gameLoop() {
 function newHero() {
   var hero = {
     sprite: new PIXI.Sprite(PIXI.loader.resources["img/hero.png"].texture),
-    dimension: 0,
+    dimension: true,
     velocity: { x: 0, y: 0 },
     jumpingTime: 0,
     speed: 1,
@@ -174,9 +252,9 @@ function newHero() {
 
 function newHazard() {
   var hazard = {
-    sprite: new PIXI.Sprite(PIXI.loader.resources["img/hazard.png"].texture),
+    sprite: new PIXI.Sprite(PIXI.loader.resources["img/hazard-a.png"].texture),
     enabled: true,
-    dimension: 0,
+    dimension: true,
     velocity: { x: 0, y: 0 },
     speed: .1,
     size: 1,
@@ -186,13 +264,22 @@ function newHazard() {
 
   hazard.reset = function() {
     hazard.enabled = true;
-    hazard.dimension = 0;
+    hazard.dimension = true;
     hazard.size = 1;
     hazard.y = Math.random() * 500;
     if (Math.random() < .5) {
       hazard.x = -50;
     } else {
       hazard.x = 1000;
+    }
+  }
+
+  hazard.flipDimension = function() {
+    hazard.dimension = !hazard.dimension;
+    if (hazard.dimension) {
+      hazard.sprite.texture = PIXI.loader.resources["img/hazard-a.png"].texture;
+    } else {
+      hazard.sprite.texture = PIXI.loader.resources["img/hazard-b-empty.png"].texture;
     }
   }
 
@@ -209,10 +296,10 @@ function newHazard() {
   return hazard;
 }
 
-function newBlackHole(x, y) {
+function newBlackHole(x, y, dimension) {
   var blackHole = {
     sprite: new PIXI.Sprite(PIXI.loader.resources["img/black-hole.png"].texture),
-    dimension: 0,
+    dimension: dimension,
     x: x,
     y: y
   }
