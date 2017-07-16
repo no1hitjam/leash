@@ -1,5 +1,16 @@
 * {
+  color: #3795ff;
   background-color: black;
-  padding: 0;
-  margin: auto
+}
+
+#game {
+  margin: auto;
+  width: 512px;
+  height: 512px;
+}
+
+#links {
+  text-align: center;
+  margin-top: 3em;
+  line-height: 1.4em;
 }

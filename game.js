@@ -80,7 +80,7 @@ var renderer = PIXI.autoDetectRenderer(
 renderer.view.style.position = "absolute";
 
 //Add the canvas to the HTML document
-document.body.appendChild(renderer.view);
+document.getElementById("game").appendChild(renderer.view);
 
 //Create a container object called the `stage`
 var stage = new PIXI.Container();
@@ -143,7 +143,7 @@ function setup() {
   menuContainer.addChild(gameTitle);
 
   gameInstructions = new PIXI.Text(
-    "Made by Jackson Lango\n * Play more games at www.jacksonlango.com\n * Follow me @no1hitjam\n\nInstructions:\n * Use the Arrow Keys to move\n * Further instructions provided in game",
+    "Made by Jackson Lango\n\nInstructions:\n * Use the Arrow Keys to move\n * Further instructions provided in game",
     {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
   );
   gameInstructions.position.set(30, 100);
