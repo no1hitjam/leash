@@ -121,7 +121,8 @@ PIXI.loader
     "img/star-a.png",
     "img/star-b.png",
     "img/health-container.png",
-    "img/health-bar.png"])
+    "img/health-bar.png",
+    "img/death-star.png"])
   .load(setup);
 
 function setup() {
@@ -269,6 +270,9 @@ function gameOver() {
   if (!hero.dimension) {
     hero.flipDimension();
   }
+  for (var i = 0; i < hero.deathStars.length; i++) {
+    hero.deathStars[i].sprite.visible = false;
+  }
   for (var i = 0; i < hazards.length; i++) {
     hazards[i].reset();
     hazards[i].enabled = false;
@@ -415,7 +419,12 @@ function gamePlayLoop() {
   if (hero.health <= 0) {
     hero.health = 0;
     if (hero.deadTime === 0) {
+      hero.explode();
       sounds["sound/death.wav"].play();
+    }
+    for (var i = 0; i < hero.deathStars.length; i++) {
+      hero.deathStars[i].sprite.x += hero.deathStars[i].velocity.x;
+      hero.deathStars[i].sprite.y += hero.deathStars[i].velocity.y;
     }
     hero.deadTime++;
   }
@@ -602,6 +611,7 @@ function newHero() {
     container: new PIXI.Container(),
     head: new PIXI.Sprite(PIXI.loader.resources["img/hero.png"].texture),
     face: new PIXI.Sprite(PIXI.loader.resources["img/hero-face.png"].texture),
+    deathStars: [],
     dimension: true,
     velocity: { x: 0, y: 0 },
     jumpingTime: 0,
@@ -627,9 +637,11 @@ function newHero() {
       hero.face.texture = PIXI.loader.resources["img/hero-face.png"].texture;
     }
     if (hero.health <= 0) {
-      hero.container.visible = false;
+      hero.head.visible = false;
+      hero.face.visible = false;
     } else {
-      hero.container.visible = true;
+      hero.head.visible = true;
+      hero.face.visible = true;
     }
   }
 
@@ -655,11 +667,41 @@ function newHero() {
     }
   }
 
+  hero.explode = function() {
+    for (var i = 0; i < hero.deathStars.length; i++) {
+      var deathStar = hero.deathStars[i];
+      deathStar.sprite.x = 0;
+      deathStar.sprite.y = 0;
+      deathStar.sprite.visible = true;
+      var scale = Math.random() * 1 + 1;
+      deathStar.sprite.scale.x = scale;
+      deathStar.sprite.scale.y = scale;
+      if (i > 4) {
+        deathStar.velocity.x = Math.random() * 4 - 2;
+        deathStar.velocity.y = Math.random() * 4 - 2;
+      }
+    }
+  }
+
   hero.container.anchor = { x: .5, y: .5 };
   hero.head.anchor = { x: .5, y: .5 };
   hero.face.anchor = { x: .5, y: .5 };
   hero.container.addChild(hero.head);
   hero.container.addChild(hero.face);
+
+  for (var i = 0; i < 10; i++) {
+    var deathStar = { 
+      velocity: { x: 0, y: 0 }, 
+      sprite: new PIXI.Sprite(PIXI.loader.resources["img/death-star.png"].texture) 
+    };
+    deathStar.sprite.visible = false;
+    hero.container.addChild(deathStar.sprite);
+    hero.deathStars.push(deathStar);
+  }
+  hero.deathStars[0].velocity = { x: .5, y: .5 };
+  hero.deathStars[1].velocity = { x: -.5, y: .5 };
+  hero.deathStars[2].velocity = { x: .5, y: -.5 };
+  hero.deathStars[3].velocity = { x: -.5, y: -.5 };
 
   return hero;
 }
