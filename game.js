@@ -60,8 +60,8 @@ var taskUI;
 var tasks = [
   "Create a black hole",
   "Enter the black hole",
-  "Eat a star pellet",
-  "Keep eating star pellets!"
+  "Eat a star gem",
+  "Keep eating star gems!"
 ];
 var taskIdx = 0;
 
@@ -154,6 +154,11 @@ function setup() {
     {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
   );
   menuScores.position.set(30, 400);
+  if (localStorage.getItem('star-gems-best-score')) {
+    bestScore = Number(localStorage.getItem('star-gems-best-score'));
+    menuContainer.addChild(menuScores);
+    menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
+  }
 
   gamePlayButtonContainer = new PIXI.Container();
   menuContainer.addChild(gamePlayButtonContainer);
@@ -260,6 +265,7 @@ function gameOver() {
   if (lastScore > bestScore) {
     bestScore = lastScore;
   }
+  localStorage.setItem('star-gems-best-score', bestScore);
   score = 0;
   menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
   menuContainer.addChild(menuScores);
