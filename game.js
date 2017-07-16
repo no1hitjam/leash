@@ -26,6 +26,8 @@ const BLACK_HOLE_FORCE_HAZARD = .05;
 const DIMENSION_A_BG = 0x0d0027;
 const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
+const COLLAPSE_TIME = 30;
+const COLLAPSE_SIZE = 4.7;
 
 // vars
 var gameState = GAME_MENU;
@@ -131,7 +133,6 @@ function setup() {
     {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
   );
   menuScores.position.set(30, 400);
-  menuContainer.addChild(menuScores);
 
   gamePlayButtonContainer = new PIXI.Container();
   menuContainer.addChild(gamePlayButtonContainer);
@@ -231,6 +232,26 @@ function gameOver() {
   gameState = GAME_MENU;
   stage.removeChild(gameContainer);
   stage.addChild(menuContainer);
+
+  // scores
+  lastScore = score;
+  if (lastScore > bestScore) {
+    bestScore = lastScore;
+  }
+  menuContainer.addChild(menuScores);
+
+  // reset game stuff
+  hero.health = 1;
+  if (!hero.dimension) {
+    hero.flipDimension();
+  }
+  for (var i = 0; i < hazards.length; i++) {
+    hazards[i].reset();
+  }
+  for (var i = 0; i < blackHoles.length; i++) {
+    blackHolesContainer.removeChild(blackHoles[i].sprite);
+  }
+  blackHoles.splice(0, blackHoles.length);
 }
 
 function gameLoop() {
@@ -338,7 +359,7 @@ function gamePlayLoop() {
         // eat
         hero.size = 1.5;
         var newScore = Math.max(Math.round(hazard.size * hazard.size * 1.3), 1);
-        hero.health += newScore / 30;
+        hero.health += newScore / 100;
         scorePop.set(newScore, hero.x, hero.y);
         score += newScore;
         hazard.enabled = false;
@@ -428,30 +449,37 @@ function gamePlayLoop() {
       }
     }
 
-    // check hazard to hazard collision
-    for (var j = 0; j < hazards.length; j++) {
-      if (i === j || !hazards[j].enabled || hazard.dimension !== hazards[j].dimension) {
-        continue;
+    // collapse hazard if too big
+    var closeToExistingHole = false;
+    for (var k = 0; k < blackHoles.length; k++) {
+      if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
+        closeToExistingHole = true;
       }
-      var combinedSize = Math.sqrt(hazard.size * hazard.size + hazards[j].size * hazards[j].size);
-      if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 10) {
-        hazards[j].enabled = false;
-        hazard.size = combinedSize;
-        var closeToExistingHole = false;
-        for (var k = 0; k < blackHoles.length; k++) {
-          if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
-            closeToExistingHole = true;
-          }
+    }
+    if (hazard.size >= COLLAPSE_SIZE && hazard.collapseTime < COLLAPSE_TIME) {
+      hazard.collapseTime++;
+    }
+    if (hazard.collapseTime >= COLLAPSE_TIME && !closeToExistingHole) {
+      // create black hole
+      hazard.enabled = false;
+      var blackHole = newBlackHole(hazard.x, hazard.y, hazard.dimension);
+      blackHolesContainer.addChild(blackHole.sprite);
+      blackHoles.push(blackHole);
+      if (taskIdx < 1) {
+        taskIdx = 1;
+      }
+    }
+
+    // check hazard to hazard collision
+    if (hazard.size < COLLAPSE_SIZE) {
+      for (var j = 0; j < hazards.length; j++) {
+        if (i === j || !hazards[j].enabled || hazard.dimension !== hazards[j].dimension || hazards[j].size >= COLLAPSE_SIZE) {
+          continue;
         }
-        if (hazard.size >= 4.5 && !closeToExistingHole) {
-          // create black hole
-          hazard.enabled = false;
-          var blackHole = newBlackHole(hazard.x, hazard.y, hazard.dimension);
-          blackHolesContainer.addChild(blackHole.sprite);
-          blackHoles.push(blackHole);
-          if (taskIdx < 1) {
-            taskIdx = 1;
-          }
+        var combinedSize = Math.sqrt(hazard.size * hazard.size + hazards[j].size * hazards[j].size);
+        if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 10) {
+          hazards[j].enabled = false;
+          hazard.size = combinedSize;
         }
       }
     }
@@ -577,12 +605,14 @@ function newHazard() {
     size: 1,
     x: 0,
     y: 0,
+    collapseTime: 0,
   };
 
   hazard.reset = function() {
     hazard.enabled = true;
     hazard.dimension = true;
     hazard.size = 1;
+    hazard.collapseTime = 0;
     hazard.y = hero.y + Math.random() * HEIGHT - HEIGHT / 2;
     if (Math.random() < .5) {
       hazard.x = hero.x - WIDTH;
@@ -616,8 +646,8 @@ function newHazard() {
   hazard.render = function() {
     hazard.sprite.x = hazard.x;
     hazard.sprite.y = hazard.y;
-    hazard.sprite.scale.x = hazard.size / 10;
-    hazard.sprite.scale.y = hazard.size / 10;
+    hazard.sprite.scale.x = hazard.size / 10 * (1 - hazard.collapseTime / COLLAPSE_TIME);
+    hazard.sprite.scale.y = hazard.size / 10 * (1 - hazard.collapseTime / COLLAPSE_TIME);
     hazard.sprite.visible = hazard.enabled;
     hazard.sprite.alpha = Math.random() * .1 + .9;
     hazard.sprite.rotation += .4;
@@ -635,7 +665,8 @@ function newBlackHole(x, y, dimension) {
     sprite: new PIXI.Sprite(PIXI.loader.resources["img/black-hole-a.png"].texture),
     dimension: dimension,
     x: x,
-    y: y
+    y: y,
+    aliveTime: 0
   }
 
   blackHole.setSprite = function() {
@@ -658,6 +689,11 @@ function newBlackHole(x, y, dimension) {
     blackHole.sprite.x = blackHole.x;
     blackHole.sprite.y = blackHole.y;
     blackHole.sprite.rotation += .2;
+    if (blackHole.aliveTime < COLLAPSE_TIME) {
+      blackHole.aliveTime++;
+    }
+    blackHole.sprite.scale.x = blackHole.aliveTime / COLLAPSE_TIME;
+    blackHole.sprite.scale.y = blackHole.aliveTime / COLLAPSE_TIME;
   }
 
   blackHole.sprite.anchor = { x: .5, y: .5 };
