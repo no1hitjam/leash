@@ -10,3 +10,9 @@ both dimensions
   enough stars combine to create a black hole to the other dimension
   stars are attracted to black holes made in same dimension
   stars are repelled by black holes made in other dimension
+
+
+
+needs:
+  better background and black hole graphics
+  consumables

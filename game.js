@@ -29,12 +29,12 @@ const BG_SCROLL = 5;
 const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 4.7;
 
-// vars
+
 var gameState = GAME_MENU;
+
+// menu 
 var bestScore = 0;
 var lastScore = 0;
-
-// menu assets
 var menuContainer;
 var gameTitle;
 var gameInstructions;
@@ -42,7 +42,8 @@ var gamePlayButtonContainer;
 var gamePlayButton;
 var menuScores;
 
-// game assets
+// game
+var playFrame = 0;
 var gameContainer;
 var camera;
 var hero;
@@ -85,6 +86,25 @@ document.body.appendChild(renderer.view);
 var stage = new PIXI.Container();
 stage.interactive = true;
 
+sounds.load([
+  "sound/star-collide.wav",
+  "sound/create-black-hole.wav",
+  "sound/enter-black-hole.wav",
+  "sound/hero-enter-black-hole.wav",
+  "sound/eat.wav",
+  "sound/hurt.wav",
+  "sound/jump.wav",
+  "sound/death.wav",
+]);
+
+sounds.whenLoaded = setupSounds;
+
+function setupSounds() {
+  sounds["sound/hurt.wav"].loop = true;
+  sounds["sound/hurt.wav"].play();
+  sounds["sound/hurt.wav"].volume = 0;
+}
+
 PIXI.loader
   .add([
     "img/hero.png", 
@@ -115,7 +135,7 @@ function setup() {
   menuContainer.addChild(menuBG);
 
   gameTitle = new PIXI.Text(
-    "STAR EATER",
+    "STAR GEMS",
     {fontFamily: "Arial", fontSize:44, fill: 0x3795ff}
   );
   gameTitle.position.set(30, 30);
@@ -157,7 +177,7 @@ function setup() {
   hero.x = 200;
   hero.y = 100;
 
-  for (var i = 0; i < 5; i++) {
+  for (var i = 0; i < 10; i++) {
     var hazard = newHazard();
     camera.addChild(hazard.sprite);
     hazards.push(hazard);
@@ -212,6 +232,7 @@ keyUp.press = function() {
     hero.velocity.y = JUMP;
     hero.jumpingTime = JUMP_TIME;
     hero.size = 1.2;
+    sounds["sound/jump.wav"].play();
   }
 }
 
@@ -238,20 +259,27 @@ function gameOver() {
   if (lastScore > bestScore) {
     bestScore = lastScore;
   }
+  score = 0;
+  menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
   menuContainer.addChild(menuScores);
 
   // reset game stuff
   hero.health = 1;
+  hero.deadTime = 0;
   if (!hero.dimension) {
     hero.flipDimension();
   }
   for (var i = 0; i < hazards.length; i++) {
     hazards[i].reset();
+    hazards[i].enabled = false;
   }
   for (var i = 0; i < blackHoles.length; i++) {
     blackHolesContainer.removeChild(blackHoles[i].sprite);
   }
   blackHoles.splice(0, blackHoles.length);
+  playFrame = 0;
+
+  sounds["sound/hurt.wav"].volume = 0;
 }
 
 function gameLoop() {
@@ -269,6 +297,8 @@ function gameMenuLoop() {
 }
 
 function gamePlayLoop() {
+  playFrame++;
+
   hero.velocity.x *= HERO_FRICTION;
   hero.velocity.y += GRAVITY;
 
@@ -292,90 +322,110 @@ function gamePlayLoop() {
     }
   }
 
-  // hero black holes
-  for (var i = 0; i < blackHoles.length; i++) {
-    var blackHole = blackHoles[i];
-    if (blackHole.dimension !== hero.dimension) {
-      continue;
-    }
-    const distanceToHero = vectorLength(
-      hero.x - blackHole.x, 
-      hero.y - blackHole.y,
-    );
-    let force = 0;
-    if (distanceToHero != 0) {
-      force = 1 / distanceToHero * BLACK_HOLE_FORCE_HERO;
-    }
+  // hero
+  if (hero.health > 0) {
+    // hero black holes
+    for (var i = 0; i < blackHoles.length; i++) {
+      var blackHole = blackHoles[i];
+      if (blackHole.dimension !== hero.dimension) {
+        continue;
+      }
+      const distanceToHero = vectorLength(
+        hero.x - blackHole.x, 
+        hero.y - blackHole.y,
+      );
+      let force = 0;
+      if (distanceToHero != 0) {
+        force = 1 / distanceToHero * BLACK_HOLE_FORCE_HERO;
+      }
 
-    var attraction = {
-      x: (blackHole.x - hero.x) / distanceToHero,
-      y: (blackHole.y - hero.y) / distanceToHero
-    }
-    if (attraction.x !== 0) {
-      hero.velocity.x += (blackHole.x - hero.x) * force;
-    }
-    if (attraction.y !== 0) {
-      hero.velocity.y += (blackHole.y - hero.y) * force;
-    }
-  }
-
-  // add up hero velocity
-  
-  hero.velocity.x = limit(hero.velocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
-  hero.velocity.y = limit(hero.velocity.y, -HERO_MAX_SPEED, HERO_MAX_SPEED);
-
-  hero.x += hero.velocity.x;
-  hero.y += hero.velocity.y;
-
-  // check hero to black hole collision
-  for (var j = 0; j < blackHoles.length; j++) {
-    var blackHole = blackHoles[j];
-    if (blackHole.dimension !== hero.dimension) {
-      continue;
-    }
-    if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 20) {
-      hero.flipDimension();
-      if (taskIdx < 2) {
-        taskIdx = 2;
+      var attraction = {
+        x: (blackHole.x - hero.x) / distanceToHero,
+        y: (blackHole.y - hero.y) / distanceToHero
+      }
+      if (attraction.x !== 0) {
+        hero.velocity.x += (blackHole.x - hero.x) * force;
+      }
+      if (attraction.y !== 0) {
+        hero.velocity.y += (blackHole.y - hero.y) * force;
       }
     }
-  }
 
-  // hero to hazard collision
-  for (var j = 0; j < hazards.length; j++) {
-    var hazard = hazards[j];
-    if (!hazard.enabled) {
-      continue;
-    }
-    var distance = vectorLength(hazard.x - hero.x, hazard.y - hero.y);
-    if (hero.dimension === hazard.dimension) {
-      // get hurt
-      if (distance < hazard.size * 20) {
-        hero.health -= .01;
-        hero.size = .7;
+    // add up hero velocity
+    
+    hero.velocity.x = limit(hero.velocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+    hero.velocity.y = limit(hero.velocity.y, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+
+    hero.x += hero.velocity.x;
+    hero.y += hero.velocity.y;
+
+    // check hero to black hole collision
+    for (var j = 0; j < blackHoles.length; j++) {
+      var blackHole = blackHoles[j];
+      if (blackHole.dimension !== hero.dimension) {
+        continue;
       }
-    } else {
-      if (distance < hazard.size * 10) {
-        // eat
-        hero.size = 1.5;
-        var newScore = Math.max(Math.round(hazard.size * hazard.size * 1.3), 1);
-        hero.health += newScore / 100;
-        scorePop.set(newScore, hero.x, hero.y);
-        score += newScore;
-        hazard.enabled = false;
-        if (taskIdx == 2) {
-          taskIdx = 3;
+      if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 20) {
+        hero.flipDimension();
+        sounds["sound/hero-enter-black-hole.wav"].play();
+        if (taskIdx < 2) {
+          taskIdx = 2;
+        }
+      }
+    }
+
+    // hero to hazard collision
+    for (var j = 0; j < hazards.length; j++) {
+      var hazard = hazards[j];
+      if (!hazard.enabled) {
+        continue;
+      }
+      var distance = vectorLength(hazard.x - hero.x, hazard.y - hero.y);
+      if (hero.dimension === hazard.dimension) {
+        // get hurt
+        if (distance < hazard.size * 20) {
+          hero.health -= .01;
+          hero.size = .7;
+          if (sounds["sound/hurt.wav"].volume < 1) {
+            sounds["sound/hurt.wav"].volume += .2;
+          }
+        }
+      } else {
+        if (distance < 15) {
+          // eat
+          hero.size = 1.5;
+          var newScore = Math.max(Math.round(hazard.size * hazard.size * 1.3), 1);
+          hero.health += hazard.size / 100;
+          scorePop.set(newScore, hero.x, hero.y);
+          score += newScore;
+          hazard.enabled = false;
+          if (taskIdx == 2) {
+            taskIdx = 3;
+          }
+          sounds["sound/eat.wav"].play();
         }
       }
     }
   }
 
-  if (hero.health < 0) {
+  if (sounds["sound/hurt.wav"].volume >= 0) {
+    sounds["sound/hurt.wav"].volume -= .1;
+  }
+
+  if (hero.health <= 0) {
+    hero.health = 0;
+    if (hero.deadTime === 0) {
+      sounds["sound/death.wav"].play();
+    }
+    hero.deadTime++;
+  }
+  if (hero.deadTime > 150) {
     gameOver();
   }
   if (hero.health > 1) {
     hero.health = 1;
   }
+  
 
   // hero size
   if (Math.abs(hero.size - 1) < .06) {
@@ -393,13 +443,18 @@ function gamePlayLoop() {
   // hazards
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
-    if (!hazard.enabled) {
+    if (!hazard.enabled && i < 5 + playFrame / 400) {
       hazard.reset();
     }
-    hazard.velocity.x *= HAZARD_FRICTION;
-    hazard.velocity.y *= HAZARD_FRICTION;
+    if (!hazard.enabled) {
+      continue;
+    }
+    if (hero.health > 0) {
+      hazard.velocity.x *= HAZARD_FRICTION;
+      hazard.velocity.y *= HAZARD_FRICTION;
+    }
 
-    if (hazard.dimension === hero.dimension) {
+    if (hazard.dimension === hero.dimension && hero.health > 0) {
       const lengthToHero = vectorLength(
         hero.x - hazard.x, 
         hero.y - hazard.y,
@@ -446,6 +501,8 @@ function gamePlayLoop() {
       }
       if (vectorLength(blackHole.x - hazard.x, blackHole.y - hazard.y) < 20) {
         hazard.flipDimension();
+        sounds["sound/enter-black-hole.wav"].volume = Math.random() * .4 + .5;
+        sounds["sound/enter-black-hole.wav"].play();
       }
     }
 
@@ -456,7 +513,10 @@ function gamePlayLoop() {
         closeToExistingHole = true;
       }
     }
-    if (hazard.size >= COLLAPSE_SIZE && hazard.collapseTime < COLLAPSE_TIME) {
+    if (hazard.size >= COLLAPSE_SIZE && hazard.collapseTime < COLLAPSE_TIME && !closeToExistingHole) {
+      if (hazard.collapseTime == 0) {
+        sounds["sound/create-black-hole.wav"].play();
+      }
       hazard.collapseTime++;
     }
     if (hazard.collapseTime >= COLLAPSE_TIME && !closeToExistingHole) {
@@ -468,6 +528,7 @@ function gamePlayLoop() {
       if (taskIdx < 1) {
         taskIdx = 1;
       }
+      
     }
 
     // check hazard to hazard collision
@@ -480,6 +541,8 @@ function gamePlayLoop() {
         if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 10) {
           hazards[j].enabled = false;
           hazard.size = combinedSize;
+          sounds["sound/star-collide.wav"].volume = Math.random() * .4 + .3;
+          sounds["sound/star-collide.wav"].play();
         }
       }
     }
@@ -547,6 +610,7 @@ function newHero() {
     x: 0,
     y: 0,
     health: 1,
+    deadTime: 0,
   }
 
   hero.render = function() {
@@ -555,12 +619,17 @@ function newHero() {
     hero.container.scale.x = hero.size / 4;
     hero.container.scale.y = hero.size / 4;
     hero.head.rotation += .01;
-    hero.face.x = hero.velocity.x;
-    hero.face.y = hero.velocity.y;
+    hero.face.x = hero.velocity.x * 1.5;
+    hero.face.y = hero.velocity.y * 1.5;
     if (hero.size < .9) {
       hero.face.texture = PIXI.loader.resources["img/hero-face-hurt.png"].texture;
     } else {
       hero.face.texture = PIXI.loader.resources["img/hero-face.png"].texture;
+    }
+    if (hero.health <= 0) {
+      hero.container.visible = false;
+    } else {
+      hero.container.visible = true;
     }
   }
 
@@ -656,6 +725,7 @@ function newHazard() {
   hazard.sprite.anchor = { x: .5, y: .5 };
 
   hazard.reset();
+  hazard.enabled = false;
 
   return hazard;
 }
