@@ -284,6 +284,7 @@ function gameOver() {
     hazards[i].enabled = false;
   }
   for (var i = 0; i < blackHoles.length; i++) {
+    blackHolesContainer.addChild(blackHoles[i].sprite);
     blackHolesContainer.removeChild(blackHoles[i].sprite);
   }
   blackHoles.splice(0, blackHoles.length);
@@ -337,6 +338,9 @@ function gamePlayLoop() {
     // hero black holes
     for (var i = 0; i < blackHoles.length; i++) {
       var blackHole = blackHoles[i];
+      if (blackHole.dying) {
+        continue;
+      }
       if (blackHole.dimension !== hero.dimension) {
         continue;
       }
@@ -372,7 +376,7 @@ function gamePlayLoop() {
     // check hero to black hole collision
     for (var j = 0; j < blackHoles.length; j++) {
       var blackHole = blackHoles[j];
-      if (blackHole.dimension !== hero.dimension) {
+      if (blackHole.dimension !== hero.dimension || blackHole.dying) {
         continue;
       }
       if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 20) {
@@ -459,7 +463,7 @@ function gamePlayLoop() {
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
     if (!hazard.enabled && i < 5 + playFrame / 400) {
-      hazard.reset();
+      hazard.reset(hero.dimension);
     }
     if (!hazard.enabled) {
       continue;
@@ -481,7 +485,7 @@ function gamePlayLoop() {
     // hazard black holes
     for (var j = 0; j < blackHoles.length; j++) {
       var blackHole = blackHoles[j];
-      if (hazard.dimension !== blackHole.dimension) {
+      if (hazard.dimension !== blackHole.dimension || blackHole.dying) {
         continue;
       }
       const distanceToHazard = vectorLength(
@@ -511,7 +515,7 @@ function gamePlayLoop() {
     // check hazard to black hole collision
     for (var j = 0; j < blackHoles.length; j++) {
       var blackHole = blackHoles[j];
-      if (blackHole.dimension !== hazard.dimension) {
+      if (blackHole.dimension !== hazard.dimension || blackHole.dying) {
         continue;
       }
       if (vectorLength(blackHole.x - hazard.x, blackHole.y - hazard.y) < 20) {
@@ -524,6 +528,9 @@ function gamePlayLoop() {
     // collapse hazard if too big
     var closeToExistingHole = false;
     for (var k = 0; k < blackHoles.length; k++) {
+      if (blackHole.dying) {
+        continue;
+      }
       if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
         closeToExistingHole = true;
       }
@@ -563,6 +570,28 @@ function gamePlayLoop() {
     }
 
     // careful here, hazard may be unenabled now
+
+    if (hazard.velocity.x === 0 && hazard.velocity.y === 0) {
+      hazard.enabled = false;
+    }
+  }
+
+  // black holes
+  for (var i = 0; i < blackHoles.length; i++) {
+    console.log(blackHoles[i].dying);
+    console.log(blackHoles[i].aliveTime);
+    if (blackHoles[i].dying) {
+      blackHoles[i].aliveTime--;
+    } else {
+      blackHoles[i].aliveTime++;
+    }
+    if (blackHoles[i].aliveTime > 5000) { //5000
+      blackHoles[i].dying = true;
+      blackHoles[i].aliveTime = COLLAPSE_TIME;
+    }
+    if (blackHoles[i].aliveTime <= 0 && blackHoles[i].dying) {
+      blackHolesContainer.removeChild(blackHoles[i].sprite);
+    }
   }
 
   //stars
@@ -725,9 +754,9 @@ function newHazard() {
     collapseTime: 0,
   };
 
-  hazard.reset = function() {
+  hazard.reset = function(dimension) {
     hazard.enabled = true;
-    hazard.dimension = true;
+    hazard.dimension = dimension;
     hazard.size = 1;
     hazard.collapseTime = 0;
     hazard.y = hero.y + Math.random() * HEIGHT - HEIGHT / 2;
@@ -772,7 +801,7 @@ function newHazard() {
 
   hazard.sprite.anchor = { x: .5, y: .5 };
 
-  hazard.reset();
+  hazard.reset(true);
   hazard.enabled = false;
 
   return hazard;
@@ -784,7 +813,8 @@ function newBlackHole(x, y, dimension) {
     dimension: dimension,
     x: x,
     y: y,
-    aliveTime: 0
+    aliveTime: 0,
+    dying: false
   }
 
   blackHole.setSprite = function() {
@@ -806,12 +836,9 @@ function newBlackHole(x, y, dimension) {
   blackHole.render = function() {
     blackHole.sprite.x = blackHole.x;
     blackHole.sprite.y = blackHole.y;
-    blackHole.sprite.rotation += .2;
-    if (blackHole.aliveTime < COLLAPSE_TIME) {
-      blackHole.aliveTime++;
-    }
-    blackHole.sprite.scale.x = blackHole.aliveTime / COLLAPSE_TIME;
-    blackHole.sprite.scale.y = blackHole.aliveTime / COLLAPSE_TIME;
+    blackHole.sprite.rotation += .2
+    blackHole.sprite.scale.x = limit(blackHole.aliveTime, 0, COLLAPSE_TIME) / COLLAPSE_TIME;
+    blackHole.sprite.scale.y = limit(blackHole.aliveTime, 0, COLLAPSE_TIME) / COLLAPSE_TIME;
   }
 
   blackHole.sprite.anchor = { x: .5, y: .5 };
