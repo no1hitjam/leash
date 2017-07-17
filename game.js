@@ -14,14 +14,13 @@ const UP = 38;
 const RIGHT = 39;
 const DOWN = 40;
 
+const SQRT2 = 1.414;
 const HERO_MAX_SPEED = 3.5;
-const HERO_FRICTION = .95;
-const GRAVITY = .2;
-const JUMP = -1.5;
-const JUMP_BOOST = -.8;
-const JUMP_TIME = 10;
+const HERO_FRICTION = .98;
+const HERO_GRAVITY_FRICTION = .995;
+const HERO_MOVE_AGAINST_GRAVITY = .35;
 const HAZARD_FRICTION = .98;
-const BLACK_HOLE_FORCE_HERO = .3;
+const BLACK_HOLE_FORCE_HERO = 50;
 const BLACK_HOLE_FORCE_HAZARD = .05;
 const DIMENSION_A_BG = 0x0d0027;
 const DIMENSION_B_BG = 0x001827;
@@ -233,19 +232,6 @@ function setup() {
   gameLoop();
 }
 
-keyUp.press = function() {
-  if (hero.velocity.y > -7) {
-    hero.velocity.y = JUMP;
-    hero.jumpingTime = JUMP_TIME;
-    hero.size = 1.2;
-    sounds["sound/jump.wav"].play();
-  }
-}
-
-keyUp.release = function() {
-  hero.jumpingTime = 0;
-}
-
 stage.click = function() {
   if (gameState === GAME_MENU) {
     gameState = GAME_PLAY;
@@ -310,68 +296,95 @@ function gameMenuLoop() {
 function gamePlayLoop() {
   playFrame++;
 
-  hero.velocity.x *= HERO_FRICTION;
-  hero.velocity.y += GRAVITY;
+  //
+  // HERO UPDATE
+  //
 
-  // key inputs
-  if (keyRight.isDown) {
-    hero.velocity.x += hero.speed;
-  }
-  
-  if (keyLeft.isDown) {
-    hero.velocity.x -= hero.speed;
-  }
+  hero.moveVelocity.x *= HERO_FRICTION;
+  hero.moveVelocity.y *= HERO_FRICTION;
+  hero.gravityVelocity.x *= HERO_GRAVITY_FRICTION;
+  hero.gravityVelocity.y *= HERO_GRAVITY_FRICTION;
 
-  if (_keyDown.isDown) {
-    hero.velocity.y += hero.speed;
-  }
-
-  if (keyUp.isDown) {
-    if (hero.jumpingTime > 0) {
-      hero.velocity.y += JUMP_BOOST;
-      hero.jumpingTime--;
-    }
-  }
-
-  // hero
   if (hero.health > 0) {
-    // hero black holes
+    // hero pulled by black holes
     for (var i = 0; i < blackHoles.length; i++) {
       var blackHole = blackHoles[i];
-      if (blackHole.dying) {
+      if (blackHole.dying || blackHole.dimension !== hero.dimension) {
         continue;
       }
-      if (blackHole.dimension !== hero.dimension) {
-        continue;
-      }
-      const distanceToHero = vectorLength(
-        hero.x - blackHole.x, 
-        hero.y - blackHole.y,
-      );
-      let force = 0;
-      if (distanceToHero != 0) {
-        force = 1 / distanceToHero * BLACK_HOLE_FORCE_HERO;
-      }
-
-      var attraction = {
-        x: (blackHole.x - hero.x) / distanceToHero,
-        y: (blackHole.y - hero.y) / distanceToHero
-      }
-      if (attraction.x !== 0) {
-        hero.velocity.x += (blackHole.x - hero.x) * force;
-      }
-      if (attraction.y !== 0) {
-        hero.velocity.y += (blackHole.y - hero.y) * force;
+      const distanceToHeroSquared = (hero.x - blackHole.x) * (hero.x - blackHole.x) + (hero.y - blackHole.y) * (hero.y - blackHole.y);
+      if (distanceToHeroSquared != 0) {
+        const force = 1 / distanceToHeroSquared * BLACK_HOLE_FORCE_HERO;
+        console.log(force);
+      
+        hero.gravityVelocity.x += (blackHole.x - hero.x) * force;
+        hero.gravityVelocity.y += (blackHole.y - hero.y) * force;
       }
     }
 
-    // add up hero velocity
-    
-    hero.velocity.x = limit(hero.velocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
-    hero.velocity.y = limit(hero.velocity.y, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+    // key inputs
+    let inputVelocity = { x: 0, y: 0 };
+    if (keyRight.isDown) {
+      if (hero.moveVelocity.x < HERO_MAX_SPEED) {
+        inputVelocity.x = hero.speed;
+      }
+    }
+    if (keyLeft.isDown) {
+      if (hero.moveVelocity.x > -HERO_MAX_SPEED) {
+        inputVelocity.x = -hero.speed;
+      }
+    }
+    if (_keyDown.isDown) {
+      if (hero.moveVelocity.y < HERO_MAX_SPEED) {
+        inputVelocity.y = hero.speed;
+        if (keyLeft.isDown || keyRight.isDown) {
+          inputVelocity.x /= SQRT2;
+          inputVelocity.y /= SQRT2;
+        }
+      }
+    }
+    if (keyUp.isDown) {
+      if (hero.moveVelocity.y > -HERO_MAX_SPEED) {
+        inputVelocity.y = -hero.speed;
+        if (keyLeft.isDown || keyRight.isDown) {
+          inputVelocity.x /= SQRT2;
+          inputVelocity.y /= SQRT2;
+        }
+      }
+    }
+    hero.moveVelocity.x += inputVelocity.x;
+    hero.moveVelocity.y += inputVelocity.y;
 
-    hero.x += hero.velocity.x;
-    hero.y += hero.velocity.y;
+    //console.log("gravity: " + Math.round(hero.gravityVelocity.x) + ", " + Math.round(hero.gravityVelocity.y) + "; move: " + Math.round(hero.moveVelocity.x) + ", " + Math.round(hero.moveVelocity.y));
+
+    // add up hero velocity
+    if (hero.moveVelocity.x < 0 && hero.gravityVelocity.x > 0) {
+      hero.gravityVelocity.x += hero.moveVelocity.x * HERO_MOVE_AGAINST_GRAVITY;
+      if (hero.gravityVelocity.x < 0) {
+        hero.gravityVelocity.x = 0;
+      }
+    }
+    if (hero.moveVelocity.x > 0 && hero.gravityVelocity.x < 0) {
+      hero.gravityVelocity.x += hero.moveVelocity.x * HERO_MOVE_AGAINST_GRAVITY;
+      if (hero.gravityVelocity.x > 0) {
+        hero.gravityVelocity.x = 0;
+      }
+    }
+    if (hero.moveVelocity.y < 0 && hero.gravityVelocity.y > 0) {
+      hero.gravityVelocity.y += hero.moveVelocity.y* HERO_MOVE_AGAINST_GRAVITY;
+      if (hero.gravityVelocity.y < 0) {
+        hero.gravityVelocity.y = 0;
+      }
+    }
+    if (hero.moveVelocity.y > 0 && hero.gravityVelocity.y < 0) {
+      hero.gravityVelocity.y += hero.moveVelocity.y * HERO_MOVE_AGAINST_GRAVITY;
+      if (hero.gravityVelocity.y > 0) {
+        hero.gravityVelocity.y = 0;
+      }
+    }
+
+    hero.x += hero.gravityVelocity.x + hero.moveVelocity.x;
+    hero.y += hero.gravityVelocity.y + hero.moveVelocity.y;
 
     // check hero to black hole collision
     for (var j = 0; j < blackHoles.length; j++) {
@@ -578,8 +591,6 @@ function gamePlayLoop() {
 
   // black holes
   for (var i = 0; i < blackHoles.length; i++) {
-    console.log(blackHoles[i].dying);
-    console.log(blackHoles[i].aliveTime);
     if (blackHoles[i].dying) {
       blackHoles[i].aliveTime--;
     } else {

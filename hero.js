@@ -5,9 +5,10 @@ function newHero() {
     face: new PIXI.Sprite(PIXI.loader.resources["img/hero-face.png"].texture),
     deathStars: [],
     dimension: true,
-    velocity: { x: 0, y: 0 },
+    moveVelocity: { x: 0, y: 0 },
+    gravityVelocity: { x: 0, y: 0},
     jumpingTime: 0,
-    speed: 1,
+    speed: .5,
     size: 1,
     x: 0,
     y: 0,
@@ -21,8 +22,8 @@ function newHero() {
     hero.container.scale.x = hero.size / 4;
     hero.container.scale.y = hero.size / 4;
     hero.head.rotation += .01;
-    hero.face.x = hero.velocity.x * 1.5;
-    hero.face.y = hero.velocity.y * 1.5;
+    hero.face.x = hero.moveVelocity.x * 1.5;
+    hero.face.y = hero.moveVelocity.y * 1.5;
     if (hero.size < .9) {
       hero.face.texture = PIXI.loader.resources["img/hero-face-hurt.png"].texture;
     } else {
