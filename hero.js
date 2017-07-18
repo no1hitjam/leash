@@ -3,6 +3,7 @@ function newHero() {
     container: new PIXI.Container(),
     head: new PIXI.Sprite(PIXI.loader.resources["img/hero.png"].texture),
     face: new PIXI.Sprite(PIXI.loader.resources["img/hero-face.png"].texture),
+    blackHoleArrows: [],
     deathStars: [],
     dimension: true,
     moveVelocity: { x: 0, y: 0 },
@@ -74,6 +75,16 @@ function newHero() {
         deathStar.velocity.y = Math.random() * 4 - 2;
       }
     }
+  }
+
+  hero.newBlackHoleArrow = function() {
+    var newArrow = new PIXI.Sprite(PIXI.loader.resources["img/black-hole-arrow.png"].texture);
+    newArrow.visible = false;
+    newArrow.scale.x = .2;
+    newArrow.scale.y = .2;
+    newArrow.anchor = { x: -3, y: .5 };
+    hero.container.addChild(newArrow);
+    hero.blackHoleArrows.push(newArrow);
   }
 
   hero.container.anchor = { x: .5, y: .5 };

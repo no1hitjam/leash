@@ -16,3 +16,10 @@ both dimensions
 needs:
   better background and black hole graphics
   consumables
+
+
+
+  fixing black holes:
+  make it really harsh when you're moving in a similar direction
+  a lot less harsh when you're perpendicular (right now it's harsh)
+  ditto when you're moving away (works correctly now)

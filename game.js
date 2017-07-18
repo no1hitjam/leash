@@ -22,7 +22,7 @@ const HERO_GRAVITY_FRICTION = .995;
 const HERO_MOVE_AGAINST_GRAVITY = .35;
 const HAZARD_FRICTION = .97;
 const BLACK_HOLE_FORCE_HERO = 50;
-const BLACK_HOLE_FORCE_HAZARD = .05;
+const BLACK_HOLE_FORCE_HAZARD = .025;
 const DIMENSION_A_BG = 0x0d0027;
 const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
@@ -122,7 +122,8 @@ PIXI.loader
     "img/star-b.png",
     "img/health-container.png",
     "img/health-bar.png",
-    "img/death-star.png"])
+    "img/death-star.png",
+    "img/black-hole-arrow.png"])
   .load(setup);
 
 function setup() {
@@ -307,12 +308,28 @@ function gamePlayLoop() {
   hero.gravityVelocity.y *= HERO_GRAVITY_FRICTION;
 
   if (hero.health > 0) {
-    // hero pulled by black holes
+    // hero checking black holes
     for (var i = 0; i < blackHoles.length; i++) {
       var blackHole = blackHoles[i];
       if (blackHole.dying || blackHole.dimension !== hero.dimension) {
+        if (i < hero.blackHoleArrows.length) {
+          hero.blackHoleArrows[i].visible = false;
+        }
         continue;
       }
+      // point arrow towards
+      while (i >= hero.blackHoleArrows.length) {
+        hero.newBlackHoleArrow();
+      }
+      hero.blackHoleArrows[i].visible = true;
+      var blackHoleAngle = Math.atan((blackHole.y - hero.y) / (blackHole.x - hero.x));
+      if (hero.x < blackHole.x) {
+        hero.blackHoleArrows[i].rotation = blackHoleAngle;
+      } else {
+        hero.blackHoleArrows[i].rotation = blackHoleAngle + Math.PI;
+      }
+
+      // get pulled in
       const distanceToHeroSquared = (hero.x - blackHole.x) * (hero.x - blackHole.x) + (hero.y - blackHole.y) * (hero.y - blackHole.y);
       if (distanceToHeroSquared != 0) {
         const force = 1 / distanceToHeroSquared * BLACK_HOLE_FORCE_HERO;
@@ -358,8 +375,6 @@ function gamePlayLoop() {
     }
     hero.moveVelocity.x += inputVelocity.x;
     hero.moveVelocity.y += inputVelocity.y;
-
-    //console.log("gravity: " + Math.round(hero.gravityVelocity.x) + ", " + Math.round(hero.gravityVelocity.y) + "; move: " + Math.round(hero.moveVelocity.x) + ", " + Math.round(hero.moveVelocity.y));
 
     // add up hero velocity
     if (hero.moveVelocity.x < 0 && hero.gravityVelocity.x > 0) {
