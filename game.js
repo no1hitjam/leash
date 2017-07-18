@@ -27,7 +27,7 @@ const DIMENSION_A_BG = 0x0d0027;
 const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
 const COLLAPSE_TIME = 30;
-const COLLAPSE_SIZE = 4.7;
+const COLLAPSE_SIZE = 7;
 
 
 var gameState = GAME_MENU;
@@ -144,7 +144,7 @@ function setup() {
   menuContainer.addChild(gameTitle);
 
   gameInstructions = new PIXI.Text(
-    "Made by Jackson Lango\n\nInstructions:\n * Use the Arrow Keys to move\n * Further instructions provided in game",
+    "Made by Jackson Lango\n\nUse the Arrow Keys to move\nFurther instructions provided in game",
     {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
   );
   gameInstructions.position.set(30, 100);
@@ -184,8 +184,8 @@ function setup() {
   hero.x = 200;
   hero.y = 100;
 
-  for (var i = 0; i < 10; i++) {
-    var hazard = newHazard();
+  for (var i = 0; i < 20; i++) {
+    var hazard = newHazard(i < 10);
     camera.addChild(hazard.sprite);
     hazards.push(hazard);
   }
@@ -414,7 +414,7 @@ function gamePlayLoop() {
       if (blackHole.dimension !== hero.dimension || blackHole.dying) {
         continue;
       }
-      if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 20) {
+      if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 50) {
         hero.flipDimension();
         sounds["sound/hero-enter-black-hole.wav"].play();
         if (taskIdx < 2) {
@@ -498,7 +498,7 @@ function gamePlayLoop() {
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
     if (!hazard.enabled && i < 5 + playFrame / 400) {
-      hazard.reset(hero.dimension);
+      hazard.reset();
     }
     if (!hazard.enabled) {
       continue;
@@ -553,7 +553,7 @@ function gamePlayLoop() {
       if (blackHole.dimension !== hazard.dimension || blackHole.dying) {
         continue;
       }
-      if (vectorLength(blackHole.x - hazard.x, blackHole.y - hazard.y) < 20) {
+      if (vectorLength(blackHole.x - hazard.x, blackHole.y - hazard.y) < 35) {
         hazard.flipDimension();
         sounds["sound/enter-black-hole.wav"].volume = Math.random() * .4 + .5;
         sounds["sound/enter-black-hole.wav"].play();

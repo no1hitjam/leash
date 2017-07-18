@@ -1,8 +1,9 @@
-function newHazard() {
+function newHazard(dimension) {
   var hazard = {
     sprite: new PIXI.Sprite(PIXI.loader.resources["img/hazard-a.png"].texture),
     enabled: true,
-    dimension: true,
+    startingDimension: dimension,
+    dimension: dimension,
     velocity: { x: 0, y: 0 },
     speed: .15,
     size: 1,
@@ -11,9 +12,9 @@ function newHazard() {
     collapseTime: 0,
   };
 
-  hazard.reset = function(dimension) {
+  hazard.reset = function() {
     hazard.enabled = true;
-    hazard.dimension = dimension;
+    hazard.dimension = hazard.startingDimension;
     hazard.size = 1;
     hazard.collapseTime = 0;
     hazard.y = hero.y + Math.random() * HEIGHT - HEIGHT / 2;
