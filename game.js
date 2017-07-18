@@ -267,6 +267,9 @@ function gameOver() {
   for (var i = 0; i < hero.deathStars.length; i++) {
     hero.deathStars[i].sprite.visible = false;
   }
+  for (var i = 0; i < hero.blackHoleArrows.length; i++) {
+    hero.blackHoleArrows[i].visible = false;
+  }
   for (var i = 0; i < hazards.length; i++) {
     hazards[i].reset();
     hazards[i].enabled = false;
