@@ -4,7 +4,7 @@ function newHazard() {
     enabled: true,
     dimension: true,
     velocity: { x: 0, y: 0 },
-    speed: .1,
+    speed: .15,
     size: 1,
     x: 0,
     y: 0,

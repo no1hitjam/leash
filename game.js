@@ -16,10 +16,11 @@ const DOWN = 40;
 
 const SQRT2 = 1.414;
 const HERO_MAX_SPEED = 3.5;
+const HERO_MAX_GRAVITY = 8;
 const HERO_FRICTION = .98;
 const HERO_GRAVITY_FRICTION = .995;
 const HERO_MOVE_AGAINST_GRAVITY = .35;
-const HAZARD_FRICTION = .98;
+const HAZARD_FRICTION = .97;
 const BLACK_HOLE_FORCE_HERO = 50;
 const BLACK_HOLE_FORCE_HAZARD = .05;
 const DIMENSION_A_BG = 0x0d0027;
@@ -322,6 +323,9 @@ function gamePlayLoop() {
       }
     }
 
+    hero.gravityVelocity.x = limit(hero.gravityVelocity.x, -HERO_MAX_GRAVITY, HERO_MAX_GRAVITY);
+    hero.gravityVelocity.y = limit(hero.gravityVelocity.y, -HERO_MAX_GRAVITY, HERO_MAX_GRAVITY);
+
     // key inputs
     let inputVelocity = { x: 0, y: 0 };
     if (keyRight.isDown) {
@@ -418,7 +422,7 @@ function gamePlayLoop() {
           }
         }
       } else {
-        if (distance < 15) {
+        if (distance < 25) {
           // eat
           hero.size = 1.5;
           var newScore = Math.max(Math.round(hazard.size * hazard.size * 1.3), 1);
@@ -574,6 +578,10 @@ function gamePlayLoop() {
         }
         var combinedSize = Math.sqrt(hazard.size * hazard.size + hazards[j].size * hazards[j].size);
         if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 10) {
+          hazard.x = (hazard.x + hazards[j].x) / 2;
+          hazard.y = (hazard.y + hazards[j].y) / 2;
+          hazard.velocity.x = (hazard.velocity.x + hazards[j].velocity.x) / 2;
+          hazard.velocity.y = (hazard.velocity.y + hazards[j].velocity.y) / 2;
           hazards[j].enabled = false;
           hazard.size = combinedSize;
           sounds["sound/star-collide.wav"].volume = Math.random() * .4 + .3;
