@@ -561,23 +561,20 @@ function gamePlayLoop() {
     }
 
     // collapse hazard if too big
-    var closeToExistingHole = false;
-    for (var k = 0; k < blackHoles.length; k++) {
-      if (blackHole.dying) {
-        continue;
-      }
-      if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
-        closeToExistingHole = true;
-      }
-    }
-    if (hazard.size >= COLLAPSE_SIZE && hazard.collapseTime < COLLAPSE_TIME && !closeToExistingHole) {
+    if (hazard.size >= COLLAPSE_SIZE && hazard.collapseTime < COLLAPSE_TIME) {
       if (hazard.collapseTime == 0) {
         sounds["sound/create-black-hole.wav"].play();
       }
       hazard.collapseTime++;
     }
-    if (hazard.collapseTime >= COLLAPSE_TIME && !closeToExistingHole) {
+    if (hazard.collapseTime >= COLLAPSE_TIME) {
       // create black hole
+      for (var k = 0; k < blackHoles.length; k++) {
+        if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
+          blackHoles[k].aliveTime = COLLAPSE_TIME;
+          blackHoles[k].dying = true;
+        }
+      }
       hazard.enabled = false;
       var blackHole = newBlackHole(hazard.x, hazard.y, hazard.dimension);
       blackHolesContainer.addChild(blackHole.sprite);
