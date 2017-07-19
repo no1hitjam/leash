@@ -19,7 +19,13 @@ needs:
 
 
 
-  fixing black holes:
-  make it really harsh when you're moving in a similar direction
-  a lot less harsh when you're perpendicular (right now it's harsh)
-  ditto when you're moving away (works correctly now)
+fixing black holes:
+make it really harsh when you're moving in a similar direction
+a lot less harsh when you're perpendicular (right now it's harsh)
+ditto when you're moving away (works correctly now)
+
+
+
+todo: 
+* spawn some pellets at the start
+* visual instructions for stars and pellets

@@ -11,6 +11,14 @@ function vectorLength(x, y) {
   return Math.sqrt(x * x + y * y);
 }
 
+function randomSign() {
+  if (Math.random() < .5) {
+    return 1;
+  } else {
+    return -1;
+  }
+}
+
 
 // keyboard class
 function keyboard(keyCode) {

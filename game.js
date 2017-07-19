@@ -3,8 +3,8 @@ if(!PIXI.utils.isWebGLSupported()){
   type = "canvas"
 }
 
-const WIDTH = 512;
-const HEIGHT = 512;
+const WIDTH = 1000;
+const HEIGHT = 600;
 
 const GAME_MENU = 0;
 const GAME_PLAY = 1;
@@ -15,6 +15,7 @@ const RIGHT = 39;
 const DOWN = 40;
 
 const SQRT2 = 1.414;
+const MENU_SPAWN_WIDTH = 300;
 const HERO_MAX_SPEED = 3.5;
 const HERO_MAX_GRAVITY = 8;
 const HERO_FRICTION = .98;
@@ -37,6 +38,8 @@ var bestScore = 0;
 var lastScore = 0;
 var menuContainer;
 var gameTitle;
+var gameTitleBG;
+var gameTitleStars = [];
 var gameInstructions;
 var gamePlayButtonContainer;
 var gamePlayButton;
@@ -107,6 +110,7 @@ function setupSounds() {
 
 PIXI.loader
   .add([
+    "img/title.png",
     "img/hero.png", 
     "img/hero-face.png", 
     "img/hero-face-hurt.png", 
@@ -136,12 +140,39 @@ function setup() {
   menuBG.drawRect(0, 0, WIDTH, HEIGHT);
   menuContainer.addChild(menuBG);
 
-  gameTitle = new PIXI.Text(
-    "STAR GEMS",
-    {fontFamily: "Arial", fontSize:44, fill: 0x3795ff}
-  );
-  gameTitle.position.set(30, 30);
+  gameTitle = new PIXI.Sprite(PIXI.loader.resources["img/title.png"].texture);
+  gameTitle.anchor.x = .5;
+  //gameTitle.alpha = 1;
+  gameTitle.position.set(WIDTH / 2, 150);
   menuContainer.addChild(gameTitle);
+
+  gameTitleBG = new PIXI.Graphics();
+  gameTitleBG.beginFill(0x3795ff);
+  gameTitleBG.drawRect(0, 0, WIDTH, HEIGHT);
+  gameTitleBG.mask = gameTitle;
+  gameTitleBG.fadingIn = true;
+  gameTitleBG.alpha = 0;
+  menuContainer.addChild(gameTitleBG);
+
+  for (var i = 0; i < 12; i++) {
+    let newHazard = new PIXI.Sprite(PIXI.loader.resources["img/hazard-a.png"].texture);
+    menuContainer.addChild(newHazard);
+    newHazard.mask = gameTitle;
+    newHazard.anchor = { x: .5, y: .5 };
+    newHazard.resetAll = function() {
+      newHazard.velocity = { x: randomSign() * 4 + Math.random() * 3.5, y: Math.random() * 2 - 1 };
+      let startX = -MENU_SPAWN_WIDTH;
+      if (newHazard.velocity.x < 0) {
+        startX = WIDTH + MENU_SPAWN_WIDTH;
+      } 
+      newHazard.position.set(startX, gameTitle.y + Math.random() * 150);
+      let scale = Math.random() + .1;
+      newHazard.scale.x = scale;
+      newHazard.scale.y = scale;
+    }
+    newHazard.resetAll();
+    gameTitleStars.push(newHazard);
+  }
 
   gameInstructions = new PIXI.Text(
     "Made by Jackson Lango\n\nUse the Arrow Keys to move\nFurther instructions provided in game",
@@ -204,8 +235,8 @@ function setup() {
   camera.addChild(hero.container);
 
   healthContainer = new PIXI.Sprite(PIXI.loader.resources["img/health-container.png"].texture);
-  healthContainer.x = 6;
-  healthContainer.y = 490;
+  healthContainer.x = (WIDTH - 500) / 2;
+  healthContainer.y = HEIGHT - 30;
   healthBar = new PIXI.Sprite(PIXI.loader.resources["img/health-bar.png"].texture);
   healthBar.scale.x = 1;
   gameContainer.addChild(healthContainer);
@@ -295,7 +326,26 @@ function gameLoop() {
 }
 
 function gameMenuLoop() {
-  
+  if (gameTitleBG.fadingIn) {
+    gameTitleBG.alpha += .001;
+    if (gameTitleBG.alpha >= .2) {
+      gameTitleBG.fadingIn = false;
+    }
+  } else {
+    gameTitleBG.alpha -= .001;
+    if (gameTitleBG.alpha <= 0) {
+      gameTitleBG.fadingIn = true;
+    }
+  }
+  for (var i = 0; i < gameTitleStars.length; i++) {
+    gameTitleStars[i].x += gameTitleStars[i].velocity.x;
+    gameTitleStars[i].y += gameTitleStars[i].velocity.y;
+    gameTitleStars[i].rotation += .2;
+    gameTitleStars[i].alpha = Math.random() * .1 + .3;
+    if (gameTitleStars[i].x < -MENU_SPAWN_WIDTH || gameTitleStars[i].x > WIDTH + MENU_SPAWN_WIDTH) {
+      gameTitleStars[i].resetAll();
+    }
+  }
 }
 
 function gamePlayLoop() {
@@ -628,7 +678,7 @@ function gamePlayLoop() {
     }
   }
 
-  //stars
+  // stars
   for (var i = 0; i < stars.length; i++) {
     var star = stars[i];
     if (bgCamera.x + star.x > WIDTH) {
