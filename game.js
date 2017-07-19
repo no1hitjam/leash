@@ -15,7 +15,11 @@ const RIGHT = 39;
 const DOWN = 40;
 
 const SQRT2 = 1.414;
+
 const MENU_SPAWN_WIDTH = 300;
+const MENU_BLUE = 0x0223e4;
+const MENU_YELLOW = 0xb7b978;
+
 const HERO_MAX_SPEED = 3.5;
 const HERO_MAX_GRAVITY = 8;
 const HERO_FRICTION = .98;
@@ -31,16 +35,17 @@ const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 7;
 
 
+
 var gameState = GAME_MENU;
 
 // menu 
 var bestScore = 0;
 var lastScore = 0;
 var menuContainer;
+var tutorialContainer;
 var gameTitle;
 var gameTitleBG;
 var gameTitleStars = [];
-var gameInstructions;
 var gamePlayButtonContainer;
 var gamePlayButton;
 var menuScores;
@@ -174,12 +179,46 @@ function setup() {
     gameTitleStars.push(newHazard);
   }
 
-  gameInstructions = new PIXI.Text(
-    "Made by Jackson Lango\n\nUse the Arrow Keys to move\nFurther instructions provided in game",
-    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
+  var gameBy = new PIXI.Text(
+    "Jackson Lango's",
+    { fontFamily: "Arial", fontSize: 16, fill: MENU_BLUE }
+  )
+  gameBy.anchor = { x: .5, y: .5 };
+  gameBy.position.set(WIDTH / 2, 130);
+  menuContainer.addChild(gameBy);
+
+  tutorialContainer = new PIXI.Container();
+  tutorialContainer.position.set(WIDTH / 2 - 200, 500);
+  menuContainer.addChild(tutorialContainer);
+
+  var tutMove = new PIXI.Text(
+    "Move with the Arrow Keys",
+    { fontFamily: "Arial", fontSize: 14, fill: MENU_YELLOW }
   );
-  gameInstructions.position.set(30, 100);
-  menuContainer.addChild(gameInstructions);
+  tutMove.position.set(100, -60);
+  tutorialContainer.addChild(tutMove);
+  
+  var tutAvoidText = new PIXI.Text(
+    "Avoid these:",
+    { fontFamily: "Arial", fontSize: 14, fill: MENU_YELLOW }
+  );
+  tutorialContainer.addChild(tutAvoidText);
+  var tutAvoid = new PIXI.Sprite(PIXI.loader.resources["img/hazard-a.png"].texture);
+  tutAvoid.scale = { x: .1, y: .1 };
+  tutAvoid.position.set(90, -15);
+  tutorialContainer.addChild(tutAvoid);
+
+  var tutCollectText = new PIXI.Text(
+    "Collect these:",
+    { fontFamily: "Arial", fontSize: 14, fill: MENU_YELLOW }
+  );
+  tutCollectText.position.set(220, 0);
+  tutorialContainer.addChild(tutCollectText);
+  var tutCollect = new PIXI.Sprite(PIXI.loader.resources["img/hazard-b-empty.png"].texture);
+  tutCollect.scale = { x: .1, y: .1 };
+  tutCollect.position.set(320, -15);
+  tutorialContainer.addChild(tutCollect);
+  
 
   menuScores = new PIXI.Text(
     "Best Score: " + bestScore + "\nLast Score: " + lastScore,
@@ -221,15 +260,19 @@ function setup() {
     hazards.push(hazard);
   }
 
-  for (var i = 0; i < 21; i++) {
+  for (var i = 0; i < 42; i++) {
     var star = new PIXI.Sprite(PIXI.loader.resources["img/star-a.png"].texture);
     star.x = Math.random() * WIDTH;
     star.y = Math.random() * HEIGHT;
     star.alpha = Math.random();
     star.width = 10;
     star.height = 10;
-    bgCamera.addChild(star);
-    stars.push(star);
+    if (i < 21) {
+      bgCamera.addChild(star);
+      stars.push(star);
+    } else {
+      menuContainer.addChild(star);
+    }
   }
 
   camera.addChild(hero.container);
@@ -270,6 +313,7 @@ stage.click = function() {
     gameState = GAME_PLAY;
     stage.removeChild(menuContainer);
     stage.addChild(gameContainer);
+    gameContainer.addChild(tutorialContainer);
   }
 }
 
@@ -288,6 +332,9 @@ function gameOver() {
   score = 0;
   menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
   menuContainer.addChild(menuScores);
+
+  menuContainer.addChild(tutorialContainer);
+  tutorialContainer.alpha = 1;
 
   // reset game stuff
   hero.health = 1;
@@ -311,6 +358,8 @@ function gameOver() {
   }
   blackHoles.splice(0, blackHoles.length);
   playFrame = 0;
+
+  
 
   sounds["sound/hurt.wav"].volume = 0;
 }
@@ -711,6 +760,9 @@ function gamePlayLoop() {
   healthBar.scale.x = hero.health;
   scoreUI.text = "Score: " + score;
   taskUI.text = "Task: " + tasks[taskIdx];
+  if (tutorialContainer.alpha > 0) {
+    tutorialContainer.alpha -= .003;
+  }
 
   // rendering
   hero.render();
