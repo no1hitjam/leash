@@ -280,8 +280,9 @@ function setup() {
   healthContainer = new PIXI.Sprite(PIXI.loader.resources["img/health-container.png"].texture);
   healthContainer.x = (WIDTH - 500) / 2;
   healthContainer.y = HEIGHT - 30;
+  healthContainer.alpha = 0;
   healthBar = new PIXI.Sprite(PIXI.loader.resources["img/health-bar.png"].texture);
-  healthBar.scale.x = 1;
+  healthBar.scale.x = 0;
   gameContainer.addChild(healthContainer);
   healthContainer.addChild(healthBar);
 
@@ -314,6 +315,7 @@ stage.click = function() {
     stage.removeChild(menuContainer);
     stage.addChild(gameContainer);
     gameContainer.addChild(tutorialContainer);
+    hero.size = 0;
   }
 }
 
@@ -333,8 +335,12 @@ function gameOver() {
   menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
   menuContainer.addChild(menuScores);
 
+  // ui
+
   menuContainer.addChild(tutorialContainer);
   tutorialContainer.alpha = 1;
+  healthContainer.alpha = 0;
+  healthBar.scale.x = 0;
 
   // reset game stuff
   hero.health = 1;
@@ -757,7 +763,15 @@ function gamePlayLoop() {
   bgCamera.y = (-hero.y + HEIGHT / 2) / BG_SCROLL;
 
   // ui
-  healthBar.scale.x = hero.health;
+  if (hero.health < 1 && healthContainer.alpha < 1) {
+    healthContainer.alpha += .015;
+  }
+  if (healthBar.scale.x < hero.health) {
+    healthBar.scale.x += .04;
+  }
+  if (healthBar.scale.x > hero.health) {
+    healthBar.scale.x = hero.health;
+  }
   scoreUI.text = "Score: " + score;
   taskUI.text = "Task: " + tasks[taskIdx];
   if (tutorialContainer.alpha > 0) {
