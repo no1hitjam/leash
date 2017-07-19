@@ -37,3 +37,4 @@ ditto when you're moving away (works correctly now)
 todo: 
 * spawn some pellets at the start
 * visual instructions for stars and pellets
+* make small stars have less "friction" than large ones

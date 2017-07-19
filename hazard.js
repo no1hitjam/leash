@@ -5,7 +5,7 @@ function newHazard(dimension) {
     startingDimension: dimension,
     dimension: dimension,
     velocity: { x: 0, y: 0 },
-    speed: .15,
+    speed: .18,
     size: 1,
     x: 0,
     y: 0,

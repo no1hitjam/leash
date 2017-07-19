@@ -25,7 +25,7 @@ const HERO_MAX_GRAVITY = 8;
 const HERO_FRICTION = .98;
 const HERO_GRAVITY_FRICTION = .995;
 const HERO_MOVE_AGAINST_GRAVITY = .35;
-const HAZARD_FRICTION = .97;
+const HAZARD_FRICTION = .95;
 const BLACK_HOLE_FORCE_HERO = 50;
 const BLACK_HOLE_FORCE_HAZARD = .025;
 const DIMENSION_A_BG = 0x0d0027;
@@ -291,14 +291,14 @@ function setup() {
 
   scoreUI = new PIXI.Text(
     "Score: 0",
-    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
+    {fontFamily: "Arial", fontSize: 14, fill: MENU_BLUE}
   );
   scoreUI.position.set(10, 30);
   gameContainer.addChild(scoreUI);
 
   taskUI = new PIXI.Text(
     "Score: 0",
-    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
+    {fontFamily: "Arial", fontSize: 14, fill: MENU_BLUE}
   );
   taskUI.position.set(10, 10);
   gameContainer.addChild(taskUI);
@@ -602,15 +602,15 @@ function gamePlayLoop() {
   // hazards
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
-    if (!hazard.enabled && i < 5 + playFrame / 400) {
+    if (!hazard.enabled && i < 8 + playFrame / 400) {
       hazard.reset();
     }
     if (!hazard.enabled) {
       continue;
     }
     if (hero.health > 0) {
-      hazard.velocity.x *= HAZARD_FRICTION;
-      hazard.velocity.y *= HAZARD_FRICTION;
+      hazard.velocity.x *= Math.min(.995, HAZARD_FRICTION + hazard.size * .01);
+      hazard.velocity.y *= Math.min(.995, HAZARD_FRICTION + hazard.size * .01);
     }
 
     if (hazard.dimension === hero.dimension && hero.health > 0) {
@@ -763,7 +763,7 @@ function gamePlayLoop() {
   bgCamera.y = (-hero.y + HEIGHT / 2) / BG_SCROLL;
 
   // ui
-  if (hero.health < 1 && healthContainer.alpha < 1) {
+  if (hero.health < 1 && healthContainer.alpha < .8) {
     healthContainer.alpha += .015;
   }
   if (healthBar.scale.x < hero.health) {
