@@ -14,12 +14,17 @@ both dimensions
 
 
 needs:
-  better background and black hole graphics
-  consumables
+  black holes forming close together buggy?
+  fullscreen
+  executable
+  cocoonjs iphone game with tilt controls?
+  tips and tricks (unlockables?)
+  results page
+  lore
+  other modes?
+  stop squaring for black hole suction? (too disorienting?)
+  zoom appropriately per resolution
 
 
 
-  fixing black holes:
-  make it really harsh when you're moving in a similar direction
-  a lot less harsh when you're perpendicular (right now it's harsh)
-  ditto when you're moving away (works correctly now)
+
