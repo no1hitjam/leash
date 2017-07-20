@@ -33,6 +33,7 @@ const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
 const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 7;
+const BLACK_HOLE_ALIVE_TIME = 15000;
 
 var gameState = GAME_MENU;
 
@@ -725,7 +726,7 @@ function gamePlayLoop() {
     } else {
       blackHoles[i].aliveTime++;
     }
-    if (blackHoles[i].aliveTime > 5000) { //5000
+    if (blackHoles[i].aliveTime > BLACK_HOLE_ALIVE_TIME) { 
       blackHoles[i].dying = true;
       blackHoles[i].aliveTime = COLLAPSE_TIME;
     }
