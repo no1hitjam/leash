@@ -25,7 +25,7 @@ const HERO_MAX_GRAVITY = 8;
 const HERO_FRICTION = .98;
 const HERO_GRAVITY_FRICTION = .995;
 const HERO_MOVE_AGAINST_GRAVITY = .35;
-const HAZARD_FRICTION = .95;
+const HAZARD_FRICTION = .94;
 const BLACK_HOLE_FORCE_HERO = 50;
 const BLACK_HOLE_FORCE_HAZARD = .025;
 const DIMENSION_A_BG = 0x0d0027;
@@ -33,8 +33,6 @@ const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
 const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 7;
-
-
 
 var gameState = GAME_MENU;
 
@@ -535,7 +533,7 @@ function gamePlayLoop() {
         continue;
       }
       var distance = vectorLength(hazard.x - hero.x, hazard.y - hero.y);
-      if (hero.dimension === hazard.dimension) {
+      if (hero.dimension === hazard.dimension && hazard.collapseTime <= 0) {
         // get hurt
         if (distance < hazard.size * 20) {
           hero.health -= .01;
@@ -549,7 +547,7 @@ function gamePlayLoop() {
           // eat
           hero.size = 1.5;
           var newScore = Math.max(Math.round(hazard.size * hazard.size * 1.3), 1);
-          hero.health += hazard.size / 100;
+          hero.health += hazard.size / 50;
           scorePop.set(newScore, hero.x, hero.y);
           score += newScore;
           hazard.enabled = false;
@@ -581,6 +579,9 @@ function gamePlayLoop() {
   if (hero.deadTime > 150) {
     gameOver();
   }
+  if (hero.health > 0) {
+    hero.health += .0002;
+  }
   if (hero.health > 1) {
     hero.health = 1;
   }
@@ -602,15 +603,15 @@ function gamePlayLoop() {
   // hazards
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
-    if (!hazard.enabled && i < 8 + playFrame / 400) {
+    if (!hazard.enabled && i < 6 + playFrame / 400) {
       hazard.reset();
     }
     if (!hazard.enabled) {
       continue;
     }
     if (hero.health > 0) {
-      hazard.velocity.x *= Math.min(.995, HAZARD_FRICTION + hazard.size * .01);
-      hazard.velocity.y *= Math.min(.995, HAZARD_FRICTION + hazard.size * .01);
+      hazard.velocity.x *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
+      hazard.velocity.y *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
     }
 
     if (hazard.dimension === hero.dimension && hero.health > 0) {
@@ -618,8 +619,8 @@ function gamePlayLoop() {
         hero.x - hazard.x, 
         hero.y - hazard.y,
       );
-      hazard.velocity.x += (hero.x - hazard.x) / lengthToHero * hazard.speed;
-      hazard.velocity.y += (hero.y - hazard.y) / lengthToHero * hazard.speed;
+      hazard.velocity.x += (hero.x - hazard.x) / lengthToHero * hazard.speed * 1 / (.3 + hazard.size * .8);
+      hazard.velocity.y += (hero.y - hazard.y) / lengthToHero * hazard.speed * 1 / (.3 + hazard.size * .8);
     }
 
     // hazard black holes

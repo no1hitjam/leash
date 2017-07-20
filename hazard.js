@@ -5,7 +5,7 @@ function newHazard(dimension) {
     startingDimension: dimension,
     dimension: dimension,
     velocity: { x: 0, y: 0 },
-    speed: .18,
+    speed: .33,
     size: 1,
     x: 0,
     y: 0,
@@ -17,6 +17,7 @@ function newHazard(dimension) {
     hazard.dimension = hazard.startingDimension;
     hazard.size = 1;
     hazard.collapseTime = 0;
+    hazard.speed = Math.random() * .15 + .18;
     hazard.y = hero.y + Math.random() * HEIGHT - HEIGHT / 2;
     if (Math.random() < .5) {
       hazard.x = hero.x - WIDTH;
