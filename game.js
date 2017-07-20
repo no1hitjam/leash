@@ -75,7 +75,13 @@ var taskIdx = 0;
 var keyLeft = keyboard(LEFT);
 var keyRight = keyboard(RIGHT);
 var keyUp = keyboard(UP);
-var _keyDown = keyboard(DOWN);
+var keyDown = keyboard(DOWN);
+resetKeys = function() {
+  let keys = [keyLeft, keyRight, keyUp, keyDown];
+  for (var i = 0; i < keys.length; i++) {
+    keys[i].isDown = false;
+  }
+}
 
 
 //Create the renderer
@@ -364,9 +370,9 @@ function gameOver() {
   blackHoles.splice(0, blackHoles.length);
   playFrame = 0;
 
-  
-
   sounds["sound/hurt.wav"].volume = 0;
+
+  resetKeys();
 }
 
 function gameLoop() {
@@ -462,7 +468,7 @@ function gamePlayLoop() {
         inputVelocity.x = -hero.speed;
       }
     }
-    if (_keyDown.isDown) {
+    if (keyDown.isDown) {
       if (hero.moveVelocity.y < HERO_MAX_SPEED) {
         inputVelocity.y = hero.speed;
         if (keyLeft.isDown || keyRight.isDown) {
