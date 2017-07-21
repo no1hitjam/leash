@@ -19,7 +19,6 @@ function randomSign() {
   }
 }
 
-
 // keyboard class
 function keyboard(keyCode) {
   var key = {};
