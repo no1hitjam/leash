@@ -40,6 +40,7 @@ var gameState = GAME_MENU;
 // menu 
 var bestScore = 0;
 var lastScore = 0;
+var totalScore = 0;
 var menuContainer;
 var tutorialContainer;
 var gameTitle;
@@ -224,17 +225,19 @@ function setup() {
   tutCollect.position.set(320, -15);
   tutorialContainer.addChild(tutCollect);
   
-
-  menuScores = new PIXI.Text(
-    "Best Score: " + bestScore + "\nLast Score: " + lastScore,
-    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
-  );
-  menuScores.position.set(30, 400);
   if (localStorage.getItem('star-gems-best-score')) {
     bestScore = Number(localStorage.getItem('star-gems-best-score'));
-    menuContainer.addChild(menuScores);
-    menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
   }
+  if (localStorage.getItem('star-gems-total-score')) {
+    totalScore = Number(localStorage.getItem('star-gems-total-score'));
+  }
+
+
+  menuScores = new PIXI.Text(
+    ["Last Score: " + lastScore, "Best Score: " + bestScore, "Total Gems: " + totalScore].join('        '),
+    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
+  );
+  menuScores.position.set(30, 100);
 
   gamePlayButtonContainer = new PIXI.Container();
   menuContainer.addChild(gamePlayButtonContainer);
