@@ -21,7 +21,7 @@ const D = 68;
 const SQRT2 = 1.414;
 
 const MENU_SPAWN_WIDTH = 300;
-const MENU_BLUE = 0x0223e4;
+const MENU_BLUE = 0x3795ff;
 const MENU_YELLOW = 0xb7b978;
 
 const HERO_MAX_SPEED = 3.5;
@@ -68,14 +68,6 @@ var healthBar;
 var score = 0;
 var scoreUI;
 var scorePop;
-var taskUI;
-var tasks = [
-  "Create a black hole",
-  "Enter the black hole",
-  "Eat a star gem",
-  "Keep eating star gems!"
-];
-var taskIdx = 0;
 
 var keyLeft = keyboard(LEFT);
 var keyRight = keyboard(RIGHT);
@@ -217,19 +209,19 @@ function setup() {
     "Jackson Lango's",
     { fontFamily: "Arial", fontSize: 16, fill: MENU_BLUE }
   )
-  gameBy.anchor = { x: .5, y: .5 };
-  gameBy.position.set(WIDTH / 2, 130);
+  gameBy.position.set(WIDTH / 2 - 80, 130);
+  gameBy.alpha = .5;
   menuContainer.addChild(gameBy);
 
   tutorialContainer = new PIXI.Container();
-  tutorialContainer.position.set(WIDTH / 2 - 200, 500);
+  tutorialContainer.position.set(30, 530);
   menuContainer.addChild(tutorialContainer);
 
   var tutMove = new PIXI.Text(
     "Move with the Arrow Keys or WASD",
     { fontFamily: "Arial", fontSize: 14, fill: MENU_YELLOW }
   );
-  tutMove.position.set(100, -60);
+  tutMove.position.set(0, -60);
   tutorialContainer.addChild(tutMove);
   
   var tutAvoidText = new PIXI.Text(
@@ -253,19 +245,29 @@ function setup() {
   tutCollect.position.set(320, -15);
   tutorialContainer.addChild(tutCollect);
   
+  menuScores = new PIXI.Text(
+    "",
+    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
+  );
+  menuScores.reset = function() {
+    let scoreTexts = ["Best Score: " + bestScore, "Total Gems: " + totalScore];
+    if (lastScore > 0) {
+      scoreTexts = ["Last Score: " + lastScore, "Best Score: " + bestScore, "Total Gems: " + totalScore]
+    }
+    menuScores.text = scoreTexts.join('              ');
+  }
+  menuScores.position.set(30, 30);
   if (localStorage.getItem('star-gems-best-score')) {
+    menuContainer.addChild(menuScores);
     bestScore = Number(localStorage.getItem('star-gems-best-score'));
   }
   if (localStorage.getItem('star-gems-total-score')) {
     totalScore = Number(localStorage.getItem('star-gems-total-score'));
+    if (totalScore < bestScore) {
+      totalScore = bestScore;
+    }
   }
-
-
-  menuScores = new PIXI.Text(
-    ["Last Score: " + lastScore, "Best Score: " + bestScore, "Total Gems: " + totalScore].join('        '),
-    {fontFamily: "Arial", fontSize: 14, fill: 0x3795ff}
-  );
-  menuScores.position.set(30, 100);
+  menuScores.reset();
 
   gamePlayButtonContainer = new PIXI.Container();
   menuContainer.addChild(gamePlayButtonContainer);
@@ -311,15 +313,8 @@ function setup() {
     "Score: 0",
     {fontFamily: "Arial", fontSize: 14, fill: MENU_BLUE}
   );
-  scoreUI.position.set(10, 30);
+  scoreUI.position.set(30, 30);
   gameContainer.addChild(scoreUI);
-
-  taskUI = new PIXI.Text(
-    "Score: 0",
-    {fontFamily: "Arial", fontSize: 14, fill: MENU_BLUE}
-  );
-  taskUI.position.set(10, 10);
-  gameContainer.addChild(taskUI);
 
   renderer.backgroundColor = DIMENSION_A_BG;
 
@@ -349,12 +344,13 @@ function gameOver() {
     bestScore = lastScore;
   }
   localStorage.setItem('star-gems-best-score', bestScore);
+  totalScore += lastScore;
+  localStorage.setItem('star-gems-total-score', totalScore);
   score = 0;
-  menuScores.text = "Best Score: " + bestScore + "\nLast Score: " + lastScore;
+  menuScores.reset();
   menuContainer.addChild(menuScores);
 
   // ui
-
   menuContainer.addChild(tutorialContainer);
   tutorialContainer.alpha = 1;
   healthContainer.alpha = 0;
@@ -539,9 +535,6 @@ function gamePlayLoop() {
       if (vectorLength(blackHole.x - hero.x, blackHole.y - hero.y) < 50) {
         hero.flipDimension();
         sounds["sound/hero-enter-black-hole.wav"].play();
-        if (taskIdx < 2) {
-          taskIdx = 2;
-        }
       }
     }
 
@@ -570,9 +563,6 @@ function gamePlayLoop() {
           scorePop.set(newScore, hero.x, hero.y);
           score += newScore;
           hazard.enabled = false;
-          if (taskIdx == 2) {
-            taskIdx = 3;
-          }
           sounds["sound/eat.wav"].play();
         }
       }
@@ -690,10 +680,6 @@ function gamePlayLoop() {
       var blackHole = newBlackHole(hazard.x, hazard.y, hazard.dimension);
       blackHolesContainer.addChild(blackHole.sprite);
       blackHoles.push(blackHole);
-      if (taskIdx < 1) {
-        taskIdx = 1;
-      }
-      
     }
 
     // check hazard to hazard collision
@@ -775,9 +761,11 @@ function gamePlayLoop() {
     healthBar.scale.x = hero.health;
   }
   scoreUI.text = "Score: " + score;
-  taskUI.text = "Task: " + tasks[taskIdx];
   if (tutorialContainer.alpha > 0) {
-    tutorialContainer.alpha -= .003;
+    tutorialContainer.alpha -= .002;
+    if (bestScore >= 100) {
+      tutorialContainer.alpha -= .01;
+    }
   }
 
   // rendering
