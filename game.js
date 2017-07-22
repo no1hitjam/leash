@@ -13,6 +13,10 @@ const LEFT = 37;
 const UP = 38;
 const RIGHT = 39;
 const DOWN = 40;
+const W = 87;
+const A = 65;
+const S = 83;
+const D = 68;
 
 const SQRT2 = 1.414;
 
@@ -27,13 +31,13 @@ const HERO_GRAVITY_FRICTION = .995;
 const HERO_MOVE_AGAINST_GRAVITY = .35;
 const HAZARD_FRICTION = .94;
 const BLACK_HOLE_FORCE_HERO = 50;
-const BLACK_HOLE_FORCE_HAZARD = .025;
+const BLACK_HOLE_FORCE_HAZARD = 25;
 const DIMENSION_A_BG = 0x0d0027;
 const DIMENSION_B_BG = 0x001827;
 const BG_SCROLL = 5;
 const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 7;
-const BLACK_HOLE_ALIVE_TIME = 15000;
+const BLACK_HOLE_ALIVE_TIME = 12000;
 
 var gameState = GAME_MENU;
 
@@ -77,8 +81,12 @@ var keyLeft = keyboard(LEFT);
 var keyRight = keyboard(RIGHT);
 var keyUp = keyboard(UP);
 var keyDown = keyboard(DOWN);
+var keyW = keyboard(W);
+var keyA = keyboard(A);
+var keyS = keyboard(S);
+var keyD = keyboard(D);
 resetKeys = function() {
-  let keys = [keyLeft, keyRight, keyUp, keyDown];
+  let keys = [keyLeft, keyRight, keyUp, keyDown, keyW, keyA, keyS, keyD];
   for (var i = 0; i < keys.length; i++) {
     keys[i].isDown = false;
   }
@@ -145,11 +153,31 @@ function setup() {
   // menu assets
   menuContainer = new PIXI.Container();
   stage.addChild(menuContainer);
-
   var menuBG = new PIXI.Graphics();
   menuBG.beginFill(0x0d0027);
   menuBG.drawRect(0, 0, WIDTH, HEIGHT);
   menuContainer.addChild(menuBG);
+
+  gameContainer = new PIXI.Container();
+  camera = new PIXI.Container();
+  bgCamera = new PIXI.Container();
+  gameContainer.addChild(bgCamera);
+  gameContainer.addChild(camera);
+
+  for (var i = 0; i < 42; i++) {
+    var star = new PIXI.Sprite(PIXI.loader.resources["img/star-a.png"].texture);
+    star.x = Math.random() * WIDTH;
+    star.y = Math.random() * HEIGHT;
+    star.alpha = Math.random();
+    star.width = 10;
+    star.height = 10;
+    if (i < 21) {
+      bgCamera.addChild(star);
+      stars.push(star);
+    } else {
+      menuContainer.addChild(star);
+    }
+  }
 
   gameTitle = new PIXI.Sprite(PIXI.loader.resources["img/title.png"].texture);
   gameTitle.anchor.x = .5;
@@ -171,7 +199,7 @@ function setup() {
     newHazard.mask = gameTitle;
     newHazard.anchor = { x: .5, y: .5 };
     newHazard.resetAll = function() {
-      newHazard.velocity = { x: randomSign() * 4 + Math.random() * 3.5, y: Math.random() * 2 - 1 };
+      newHazard.velocity = { x: randomSign() * 5 + Math.random() * 6, y: Math.random() * 2 - 1 };
       let startX = -MENU_SPAWN_WIDTH;
       if (newHazard.velocity.x < 0) {
         startX = WIDTH + MENU_SPAWN_WIDTH;
@@ -198,7 +226,7 @@ function setup() {
   menuContainer.addChild(tutorialContainer);
 
   var tutMove = new PIXI.Text(
-    "Move with the Arrow Keys",
+    "Move with the Arrow Keys or WASD",
     { fontFamily: "Arial", fontSize: 14, fill: MENU_YELLOW }
   );
   tutMove.position.set(100, -60);
@@ -249,11 +277,6 @@ function setup() {
   gamePlayButtonContainer.addChild(gamePlayButton);
 
   // game assets
-  gameContainer = new PIXI.Container();
-  camera = new PIXI.Container();
-  bgCamera = new PIXI.Container();
-  gameContainer.addChild(bgCamera);
-  gameContainer.addChild(camera);
 
   blackHolesContainer = new PIXI.Container();
   camera.addChild(blackHolesContainer);
@@ -263,25 +286,12 @@ function setup() {
   hero.y = 100;
 
   for (var i = 0; i < 20; i++) {
-    var hazard = newHazard(i < 10);
+    var hazard = newHazard(i % 2 == 0);
     camera.addChild(hazard.sprite);
     hazards.push(hazard);
   }
 
-  for (var i = 0; i < 42; i++) {
-    var star = new PIXI.Sprite(PIXI.loader.resources["img/star-a.png"].texture);
-    star.x = Math.random() * WIDTH;
-    star.y = Math.random() * HEIGHT;
-    star.alpha = Math.random();
-    star.width = 10;
-    star.height = 10;
-    if (i < 21) {
-      bgCamera.addChild(star);
-      stars.push(star);
-    } else {
-      menuContainer.addChild(star);
-    }
-  }
+  
 
   camera.addChild(hero.container);
 
@@ -448,8 +458,7 @@ function gamePlayLoop() {
       // get pulled in
       const distanceToHeroSquared = (hero.x - blackHole.x) * (hero.x - blackHole.x) + (hero.y - blackHole.y) * (hero.y - blackHole.y);
       if (distanceToHeroSquared != 0) {
-        const force = 1 / distanceToHeroSquared * BLACK_HOLE_FORCE_HERO;
-        console.log(force);
+        const force = 1 / distanceToHeroSquared * BLACK_HOLE_FORCE_HERO * 5;
       
         hero.gravityVelocity.x += (blackHole.x - hero.x) * force;
         hero.gravityVelocity.y += (blackHole.y - hero.y) * force;
@@ -461,29 +470,29 @@ function gamePlayLoop() {
 
     // key inputs
     let inputVelocity = { x: 0, y: 0 };
-    if (keyRight.isDown) {
+    if (keyRight.isDown || keyD.isDown) {
       if (hero.moveVelocity.x < HERO_MAX_SPEED) {
         inputVelocity.x = hero.speed;
       }
     }
-    if (keyLeft.isDown) {
+    if (keyLeft.isDown || keyA.isDown) {
       if (hero.moveVelocity.x > -HERO_MAX_SPEED) {
         inputVelocity.x = -hero.speed;
       }
     }
-    if (keyDown.isDown) {
+    if (keyDown.isDown || keyS.isDown) {
       if (hero.moveVelocity.y < HERO_MAX_SPEED) {
         inputVelocity.y = hero.speed;
-        if (keyLeft.isDown || keyRight.isDown) {
+        if (keyLeft.isDown || keyRight.isDown || keyA.isDown || keyD.isDown) {
           inputVelocity.x /= SQRT2;
           inputVelocity.y /= SQRT2;
         }
       }
     }
-    if (keyUp.isDown) {
+    if (keyUp.isDown || keyW.isDown) {
       if (hero.moveVelocity.y > -HERO_MAX_SPEED) {
         inputVelocity.y = -hero.speed;
-        if (keyLeft.isDown || keyRight.isDown) {
+        if (keyLeft.isDown || keyRight.isDown || keyA.isDown || keyD.isDown) {
           inputVelocity.x /= SQRT2;
           inputVelocity.y /= SQRT2;
         }
@@ -589,9 +598,6 @@ function gamePlayLoop() {
   if (hero.deadTime > 150) {
     gameOver();
   }
-  if (hero.health > 0) {
-    hero.health += .0002;
-  }
   if (hero.health > 1) {
     hero.health = 1;
   }
@@ -609,8 +615,10 @@ function gamePlayLoop() {
     }
   }
 
+  //
+  // HAZARDS UPDATE
+  //
 
-  // hazards
   for (var i = 0; i < hazards.length; i++) {
     var hazard = hazards[i];
     if (!hazard.enabled && i < 6 + playFrame / 400) {
@@ -620,42 +628,28 @@ function gamePlayLoop() {
       continue;
     }
     if (hero.health > 0) {
-      hazard.velocity.x *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
-      hazard.velocity.y *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
-    }
-
-    if (hazard.dimension === hero.dimension && hero.health > 0) {
       const lengthToHero = vectorLength(
         hero.x - hazard.x, 
         hero.y - hazard.y,
       );
+      // decay velocity
+      hazard.velocity.x *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
+      hazard.velocity.y *= Math.min(.995, HAZARD_FRICTION + hazard.size * .02);
+      // move towards hero
       hazard.velocity.x += (hero.x - hazard.x) / lengthToHero * hazard.speed * 1 / (.3 + hazard.size * .8);
       hazard.velocity.y += (hero.y - hazard.y) / lengthToHero * hazard.speed * 1 / (.3 + hazard.size * .8);
     }
 
-    // hazard black holes
+    // hazard black holes pulling
     for (var j = 0; j < blackHoles.length; j++) {
       var blackHole = blackHoles[j];
       if (hazard.dimension !== blackHole.dimension || blackHole.dying) {
         continue;
       }
-      const distanceToHazard = vectorLength(
-        hazard.x - blackHole.x, 
-        hazard.y - blackHole.y,
-      );
-      let force = 0;
-      if (distanceToHazard != 0) {
-        force = 1 / distanceToHazard * BLACK_HOLE_FORCE_HAZARD;
-      }
-
-      var attraction = {
-        x: (blackHole.x - hazard.x) / distanceToHazard,
-        y: (blackHole.y - hazard.y) / distanceToHazard
-      }
-      if (attraction.x !== 0) {
+      const distanceSquared = (hazard.x - blackHole.x) * (hazard.x - blackHole.x) + (hazard.y - blackHole.y) * (hazard.y - blackHole.y);
+      if (distanceSquared != 0) {
+        const force = 1 / distanceSquared * BLACK_HOLE_FORCE_HAZARD;
         hazard.velocity.x += (blackHole.x - hazard.x) * force;
-      }
-      if (attraction.y !== 0) {
         hazard.velocity.y += (blackHole.y - hazard.y) * force;
       }
     }
@@ -686,9 +680,10 @@ function gamePlayLoop() {
     if (hazard.collapseTime >= COLLAPSE_TIME) {
       // create black hole
       for (var k = 0; k < blackHoles.length; k++) {
-        if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT) {
+        if (Math.abs(blackHoles[k].x - hazard.x) < WIDTH * .8 && Math.abs(blackHoles[k].y - hazard.y) < HEIGHT * .8) {
           blackHoles[k].aliveTime = COLLAPSE_TIME;
           blackHoles[k].dying = true;
+          console.log("destroyed black hole");
         }
       }
       hazard.enabled = false;
@@ -708,7 +703,7 @@ function gamePlayLoop() {
           continue;
         }
         var combinedSize = Math.sqrt(hazard.size * hazard.size + hazards[j].size * hazards[j].size);
-        if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 10) {
+        if (vectorLength(hazards[j].x - hazard.x, hazards[j].y - hazard.y) < combinedSize * 20) {
           hazard.x = (hazard.x + hazards[j].x) / 2;
           hazard.y = (hazard.y + hazards[j].y) / 2;
           hazard.velocity.x = (hazard.velocity.x + hazards[j].velocity.x) / 2;
@@ -722,10 +717,6 @@ function gamePlayLoop() {
     }
 
     // careful here, hazard may be unenabled now
-
-    if (hazard.velocity.x === 0 && hazard.velocity.y === 0) {
-      hazard.enabled = false;
-    }
   }
 
   // black holes
