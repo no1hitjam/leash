@@ -21,8 +21,10 @@ function newHazard(dimension) {
     hazard.y = hero.y + Math.random() * HEIGHT - HEIGHT / 2;
     if (Math.random() < .5) {
       hazard.x = hero.x - WIDTH;
+      hazard.velocity = { x: 1 + Math.random(), y: Math.random() * 4 - 1 };
     } else {
       hazard.x = hero.x + WIDTH;
+      hazard.velocity = { x: -1 - Math.random(), y: Math.random() * 4 - 1 };
     }
     hazard.setSprite();
   }
