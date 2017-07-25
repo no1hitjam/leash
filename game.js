@@ -3,7 +3,7 @@ if(!PIXI.utils.isWebGLSupported()){
   type = "canvas"
 }
 
-const WIDTH = 1000;
+const WIDTH = 350;
 const HEIGHT = 600;
 
 const GAME_MENU = 0;
@@ -39,6 +39,9 @@ const COLLAPSE_TIME = 30;
 const COLLAPSE_SIZE = 7;
 const BLACK_HOLE_ALIVE_TIME = 12000;
 
+const JOYSTICK_X = WIDTH / 2;
+const JOYSTICK_Y = HEIGHT - 100;
+
 var gameState = GAME_MENU;
 
 // menu 
@@ -68,7 +71,10 @@ var healthBar;
 var score = 0;
 var scoreUI;
 var scorePop;
+var joystick;
 
+var isMouseDown = false;
+var touchControl = { x: 0, y: 0 };
 var keyLeft = keyboard(LEFT);
 var keyRight = keyboard(RIGHT);
 var keyUp = keyboard(UP);
@@ -84,6 +90,34 @@ resetKeys = function() {
   }
 }
 
+function mouseDown(evt) {
+  isMouseDown = true;
+  getTouchControl(evt.x, evt.y);
+}
+
+function mouseUp(evt) {
+  isMouseDown = false;
+  touchControl.x = 0;
+  touchControl.y = 0;
+}
+
+function mouseMove(evt) {
+  if (isMouseDown) {
+    getTouchControl(evt.x, evt.y);
+  }
+}
+
+function getTouchControl(x, y) {
+  touchControl.x = x - JOYSTICK_X - gameDiv.getBoundingClientRect().left;
+  touchControl.y = y - JOYSTICK_Y - gameDiv.getBoundingClientRect().top;
+}
+
+var gameDiv = document.getElementById("game");
+
+gameDiv.addEventListener("mousedown", mouseDown, false);
+window.addEventListener("mouseup", mouseUp, false);
+window.addEventListener("mousemove", mouseMove, false);
+
 
 //Create the renderer
 var renderer = PIXI.autoDetectRenderer(
@@ -94,7 +128,7 @@ var renderer = PIXI.autoDetectRenderer(
 renderer.view.style.position = "absolute";
 
 //Add the canvas to the HTML document
-document.getElementById("game").appendChild(renderer.view);
+gameDiv.appendChild(renderer.view);
 
 //Create a container object called the `stage`
 var stage = new PIXI.Container();
@@ -316,6 +350,12 @@ function setup() {
   scoreUI.position.set(30, 30);
   gameContainer.addChild(scoreUI);
 
+  joystick = new PIXI.Sprite(PIXI.loader.resources["img/hazard-b.png"].texture);
+  gameContainer.addChild(joystick);
+  joystick.anchor = { x: .5, y: .5 };
+  joystick.position.set(JOYSTICK_X, JOYSTICK_Y);
+  joystick.scale = { x: .2, y: .2 }
+
   renderer.backgroundColor = DIMENSION_A_BG;
 
   renderer.render(stage);
@@ -467,35 +507,35 @@ function gamePlayLoop() {
     // key inputs
     let inputVelocity = { x: 0, y: 0 };
     if (keyRight.isDown || keyD.isDown) {
-      if (hero.moveVelocity.x < HERO_MAX_SPEED) {
-        inputVelocity.x = hero.speed;
-      }
+      inputVelocity.x = 1;
     }
     if (keyLeft.isDown || keyA.isDown) {
-      if (hero.moveVelocity.x > -HERO_MAX_SPEED) {
-        inputVelocity.x = -hero.speed;
-      }
+      inputVelocity.x = -1;
     }
     if (keyDown.isDown || keyS.isDown) {
-      if (hero.moveVelocity.y < HERO_MAX_SPEED) {
-        inputVelocity.y = hero.speed;
-        if (keyLeft.isDown || keyRight.isDown || keyA.isDown || keyD.isDown) {
-          inputVelocity.x /= SQRT2;
-          inputVelocity.y /= SQRT2;
-        }
-      }
+      inputVelocity.y = 1;
     }
     if (keyUp.isDown || keyW.isDown) {
-      if (hero.moveVelocity.y > -HERO_MAX_SPEED) {
-        inputVelocity.y = -hero.speed;
-        if (keyLeft.isDown || keyRight.isDown || keyA.isDown || keyD.isDown) {
-          inputVelocity.x /= SQRT2;
-          inputVelocity.y /= SQRT2;
-        }
-      }
+      inputVelocity.y = -1;
     }
-    hero.moveVelocity.x += inputVelocity.x;
-    hero.moveVelocity.y += inputVelocity.y;
+
+    inputVelocity.x += touchControl.x;
+    inputVelocity.y += touchControl.y;
+
+    inputVelocity = normalize(inputVelocity);
+    inputVelocity.x *= hero.speed;
+    inputVelocity.y *= hero.speed;
+
+    // normalize inputVelocity
+
+    joystick.position = lerp(
+      joystick.position,
+      { x: JOYSTICK_X + inputVelocity.x * 50, y: JOYSTICK_Y + inputVelocity.y * 50 },
+      .3
+    );
+
+    hero.moveVelocity.x = limit(hero.moveVelocity.x + inputVelocity.x, -HERO_MAX_SPEED, HERO_MAX_SPEED);
+    hero.moveVelocity.y = limit(hero.moveVelocity.y + inputVelocity.y, -HERO_MAX_SPEED, HERO_MAX_SPEED);
 
     // add up hero velocity
     if (hero.moveVelocity.x < 0 && hero.gravityVelocity.x > 0) {

@@ -19,6 +19,23 @@ function randomSign() {
   }
 }
 
+function lerp(start, end, percent) {
+  return { 
+    x: start.x + percent * (end.x - start.x),
+    y: start.y + percent * (end.y - start.y),
+  };
+}
+
+function normalize(v) {
+  if (v.x == 0 && v.y == 0) {
+    return v;
+  }
+  return { 
+    x: v.x / vectorLength(v.x, v.y), 
+    y: v.y / vectorLength(v.x, v.y) 
+  };
+}
+
 // keyboard class
 function keyboard(keyCode) {
   var key = {};
